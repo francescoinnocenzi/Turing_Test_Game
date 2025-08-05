@@ -1,0 +1,32 @@
+services:
+  mariadb:
+    image: mariadb:11.7.2-ubi9
+    container_name: mariadb-turing
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: turing_game
+      MYSQL_USER: user 
+      MYSQL_PASSWORD: pwd
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./mariadb_data:/var/lib/mysql:Z
+      - ./mariadb_init/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8003:8003"
+
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "8001:8001"
+    depends_on:
+      - backend

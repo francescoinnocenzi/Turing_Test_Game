@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Partecipante - Chat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #4834d4 0%, #686de0 100%);
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 1rem;
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #4834d4, #686de0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .status-info {
+            background: linear-gradient(135deg, #4834d4, #686de0);
+            color: white;
+            padding: 1rem;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .room-selection {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .room-selection p {
+            color: #666;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+        
+        .room-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+        
+        .room-button {
+            background: linear-gradient(135deg, #4834d4, #686de0);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(72, 52, 212, 0.3);
+        }
+        
+        .room-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(72, 52, 212, 0.4);
+        }
+        
+        .current-question {
+            background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+            border: 2px solid #e17055;
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #2d3436;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 5px 15px rgba(253, 203, 110, 0.3);
+        }
+        
+        .current-question.waiting {
+            background: linear-gradient(135deg, #ddd, #bbb);
+            color: #666;
+            font-style: italic;
+        }
+        
+        .answer-form {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            border: 2px solid #e9ecef;
+        }
+        
+        .answer-form form {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .answer-form input {
+            flex: 1;
+            padding: 1rem;
+            border: 2px solid #dee2e6;
+            border-radius: 25px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+        
+        .answer-form input:focus {
+            border-color: #4834d4;
+            box-shadow: 0 0 0 3px rgba(72, 52, 212, 0.1);
+        }
+        
+        .send-button {
+            background: linear-gradient(135deg, #00b894, #00a085);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 184, 148, 0.3);
+        }
+        
+        .send-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 184, 148, 0.4);
+        }
+        
+        .chat-history {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            padding: 1.5rem;
+            border-radius: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .chat-history h3 {
+            color: #495057;
+            margin-bottom: 1rem;
+            text-align: center;
+            font-size: 1.2rem;
+        }
+        
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        li {
+            margin-bottom: 0.8rem;
+            background: white;
+            padding: 1rem;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #4834d4;
+            transition: all 0.3s ease;
+        }
+        
+        li:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+        }
+        
+        .emoji {
+            font-size: 1.5rem;
+            margin-right: 0.5rem;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .answer-form form {
+                flex-direction: column;
+            }
+            
+            .room-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .current-question {
+                font-size: 1rem;
+                padding: 1rem;
+            }
+        }
+        
+        /* Scrollbar personalizzata */
+        .chat-history::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .chat-history::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        .chat-history::-webkit-scrollbar-thumb {
+            background: #4834d4;
+            border-radius: 10px;
+        }
+        
+        .chat-history::-webkit-scrollbar-thumb:hover {
+            background: #3742fa;
+        }
+        
+        /* Animazione per nuove domande */
+        .current-question.new-question {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.02);
+                box-shadow: 0 8px 25px rgba(253, 203, 110, 0.4);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👤 WebSocket Chat - Partecipante</h1>
+        
+        <div class="status-info">
+            <span class="emoji">🆔</span>Your ID: <span id="ws-id"></span> | 
+            <span class="emoji">🏠</span>Room: <span id="room-id">Seleziona una stanza</span>
+        </div>
+        
+        <div class="room-selection">
+            <p>🏠 Scegli la stanza per partecipare:</p>
+            <div class="room-buttons">
+                <button type="button" class="room-button" id="room1">📍 Stanza 1</button>
+                <button type="button" class="room-button" id="room2">📍 Stanza 2</button>
+                <button type="button" class="room-button" id="room3">📍 Stanza 3</button>
+            </div>
+        </div>
+        
+        <div id="current-question" class="current-question waiting">
+            <span class="emoji">⏳</span>In attesa di una domanda dal giudice...
+        </div>
+
+        <div class="answer-form">
+            <form id="messageForm" onsubmit="return false;">
+                <input type="text" id="messageText" autocomplete="off" placeholder="💬 Scrivi la tua risposta qui..." />
+                <button type="button" class="send-button" onclick="sendMessage(event)">📤 Invia Risposta</button>
+            </form>
+        </div>
+        
+        <div class="chat-history">
+            <h3>📜 Cronologia Chat</h3>
+            <ul id='messages'></ul>
+        </div>
+    </div>
+
+    <script src="../static/chat.js"></script>
+    <script>
+        // Variabili globali
+        let currentQuestionId = null;
+
+        function sendMessage(event) {
+            // Previeni qualsiasi comportamento di default
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            const input = document.getElementById("messageText");
+            
+            if (!input.value.trim()) {
+                return false;
+            }
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                // Invia come oggetto JSON con tipo "answer"
+                const message = {
+                    type: "answer", 
+                    text: input.value.trim()
+                };
+                
+                // Aggiungi question_id solo se disponibile
+                if (currentQuestionId) {
+                    message.question_id = currentQuestionId;
+                }
+                
+                try {
+                    ws.send(JSON.stringify(message));
+                    input.value = '';
+                } catch (error) {
+                    console.error("Errore nell'invio:", error);
+                    return false;
+                }
+            } else {
+                return false;
+            }
+            
+            return false;
+        }
+        // Override per mostrare la domanda corrente
+        ws_onmessage_override = function(event) {
+            try {
+                let msg = JSON.parse(event.data);
+                if (msg.type === "question") {
+                    const questionDiv = document.getElementById("current-question");
+                    questionDiv.innerHTML = `<span class="emoji">❓</span>Domanda: ${msg.text}`;
+                    questionDiv.className = "current-question new-question";
+                    
+                    // Salva l'ID della domanda se disponibile
+                    if (msg.id) {
+                        currentQuestionId = msg.id;
+                    }
+                    
+                    // Rimuovi animazione dopo 2 secondi
+                    setTimeout(() => {
+                        questionDiv.className = "current-question";
+                    }, 2000);
+                } else if (msg.type === "system") {
+                    // System message - non fare nulla
+                } else {
+                    const messages = document.getElementById('messages');
+                    const message = document.createElement('li');
+                    message.textContent = msg.text || event.data;
+                    messages.appendChild(message);
+                    
+                    // Scroll automatico verso il basso
+                    messages.scrollTop = messages.scrollHeight;
+                }
+            } catch (e) {
+                // Se non è JSON, è un messaggio di testo semplice
+                const messages = document.getElementById('messages');
+                const message = document.createElement('li');
+                message.textContent = event.data;
+                messages.appendChild(message);
+                
+                // Scroll automatico verso il basso
+                messages.scrollTop = messages.scrollHeight;
+            }
+        };
+    </script>
+</body>
+</html>
