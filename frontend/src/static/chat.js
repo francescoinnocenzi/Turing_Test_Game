@@ -67,16 +67,27 @@ document.querySelector('#room3').addEventListener('click', () => {
 });
 
 function sendMessage(event) {
+    event.preventDefault();
+
     const input = document.getElementById("messageText");
+    const text = input.value.trim();
+
+    if(!text){
+        console.warn("Messaggio vuoto, non inviato");
+        return;
+    }
+
     if (ws && ws.readyState === WebSocket.OPEN) {
        const message = {
             type: "question", // Di default è una domanda (per il giudice)
-            text: input.value
+            text: text
         };
-        ws.send(JSON.stringify(message)); // ✅ Invia JSON
+        ws.send(JSON.stringify(message)); // Invia JSON
     } else {
         console.warn("WebSocket non connesso.");
     }
-    input.value = '';
-    event.preventDefault();
+
+    input.value = ''; // Pulisce il campo
 }
+
+

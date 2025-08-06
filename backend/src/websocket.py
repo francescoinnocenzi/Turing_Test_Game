@@ -17,19 +17,19 @@ class ConnectionManager:
 
     async def connect(self, room_name: str, websocket: WebSocket, client_id: int):
         # Accetta una nuova connessione WebSocket
-        print(f"🚀 STARTING CONNECTION: room={room_name}, client={client_id}")
+        print(f"STARTING CONNECTION: room={room_name}, client={client_id}")
         await websocket.accept()
-        print(f"🔗 WEBSOCKET ACCEPTED: room={room_name}, client={client_id}")
+        print(f"WEBSOCKET ACCEPTED: room={room_name}, client={client_id}")
 
         if room_name not in self.rooms:
             self.rooms[room_name] = {} # creo dizionario associato alla chiave room
-            print(f"📝 CREATED NEW ROOM: {room_name}")
+            print(f"CREATED NEW ROOM: {room_name}")
 
         room = self.rooms[room_name]
 
         if client_id not in room:
             role_index = len(room)
-            print(f"🎭 ROLE INDEX: {role_index} for client {client_id}")
+            print(f"ROLE INDEX: {role_index} for client {client_id}")
             if role_index < len(DEFAULT_ROLES):
                 role = DEFAULT_ROLES[role_index]
             else:
@@ -40,9 +40,9 @@ class ConnectionManager:
                 "role": role
             }
             
-            print(f"✅ ASSIGNED ROLE: Client {client_id} → {role}")
+            print(f"ASSIGNED ROLE: Client {client_id} → {role}")
         
-        print(f"📊 ROOMS STATE: {[(r, list(clients.keys())) for r, clients in self.rooms.items()]}")
+        print(f"ROOMS STATE: {[(r, list(clients.keys())) for r, clients in self.rooms.items()]}")
 
     def disconnect(self, room_name: str, client_id: int):
         if room_name in self.rooms and client_id in self.rooms[room_name]:
@@ -53,7 +53,7 @@ class ConnectionManager:
             if not self.rooms[room_name]:
                 self.rooms.pop(room_name)
         
-        print(f"🔌 DISCONNECT - Client {client_id} disconnected from {room_name}")
+        print(f"DISCONNECT - Client {client_id} disconnected from {room_name}")
 
     async def send_personal_message(self, message: str, room_name: str, client_id: int):
         # Get restituisce valore associato alla chiave, quindi la websocket associata ad un client_id
@@ -64,7 +64,7 @@ class ConnectionManager:
             await client_data["ws"].send_text(message)
         
     async def broadcast(self, message: str, room_name: str):
-        print(f'📢 BROADCAST to {room_name}: {message}')
+        print(f'BROADCAST to {room_name}: {message}')
         # Invia un messaggio a tutti i client connessi nella room
         broadcast_message = json.dumps({
             "type": "system",
@@ -81,7 +81,7 @@ class ConnectionManager:
             "text": question
         })
         
-        print(f"❓ SENDING QUESTION '{question}' to players in room {room_name}")
+        print(f"SENDING QUESTION '{question}' to players in room {room_name}")
         
         sent_count = 0
         for client_id, client_data in room.items():
@@ -91,7 +91,7 @@ class ConnectionManager:
                 print(f"  → Sent to client {client_id} ({client_data['role']})")
                 sent_count += 1
         
-        print(f"✅ Question sent to {sent_count} players")
+        print(f"Question sent to {sent_count} players")
 
     async def send_answer_to_judge(self, answer: str, room_name: str, player_number: int):
         """Invia una risposta dal player al giudice"""
@@ -102,7 +102,7 @@ class ConnectionManager:
             "from": player_number  # 1 per HUMAN, 2 per BOT
         })
         
-        print(f"💬 SENDING ANSWER '{answer}' from player {player_number} to judge in room {room_name}")
+        print(f"SENDING ANSWER '{answer}' from player {player_number} to judge in room {room_name}")
         
         for client_id, client_data in room.items():
             # Invia solo al giudice
@@ -116,11 +116,11 @@ class ConnectionManager:
         room = self.rooms.get(room_name, {})
         message = json.dumps(message_data)
         
-        print(f"📢 SENDING MESSAGE to judge in room {room_name}: {message_data}")
+        print(f"SENDING MESSAGE to judge in room {room_name}: {message_data}")
         
         for client_id, client_data in room.items():
             # Invia solo al giudice
             if client_data["role"] == "JUDGE":
                 await client_data["ws"].send_text(message)
-                print(f"  → Sent to JUDGE (client {client_id})")
+                print(f"Sent to JUDGE (client {client_id})")
                 break

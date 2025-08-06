@@ -109,48 +109,47 @@ async def websocket_endpoint(websocket: WebSocket, room_name: str, client_id: in
             role = ws["role"]
             
             try:
-                print(f"🔍 Parsing JSON: {data}")
                 message = json.loads(data)
                 message_type = message.get("type")
                 text = message.get("text")
-                print(f"📋 Message type: {message_type}, Role: {role}, Text: {text}")
+                print(f"Message type: {message_type}, Role: {role}, Text: {text}")
 
                 # Se è il giudice che manda un messaggio, è una domanda per i player
                 if message_type == "question" and role == "JUDGE":
-                    print("✅ JUDGE condition matched - processing question")
+                    print("JUDGE condition matched - processing question")
 
                     await manager.send_question_to_players(text, room_name)
-                    print("📤 Question sent to players")
+                    print("Question sent to players")
 
                     try: 
-                        print("💾 Creating question request...")
+                        print("Creating question request...")
                         question_request = QuestionRequest(
                             text=text,
                             room_name=room_name,
                             author_id=str(client_id),
                             session_id= 1
                         )
-                        print("🔄 Calling create_question...")
+                        print("Calling create_question...")
                         saved_question = create_question(question_request)
-                        print(f"✅ Question saved with ID: {saved_question.id}")
+                        print(f"Question saved with ID: {saved_question.id}")
 
                         await websocket.send_text(json.dumps({
                             "type": "question_saved",
                             "question_id": saved_question.id
                         }))
-                        print("📨 Confirmation sent to judge")
+                        print("Confirmation sent to judge")
 
                     except Exception as e:
-                        print(f"❌ Errore durante il salvataggio della domanda: {e}")
+                        print(f"Errore durante il salvataggio della domanda: {e}")
                 
                 elif message_type=="answer":
-                    print("🎮 PLAYER ANSWER: Processing player response")
+                    print("PLAYER ANSWER: Processing player response")
                     # Se è un player che risponde, manda la risposta al giudice
                     question_id = message.get("question_id")
-                    print(f"🔍 Question ID from message: {question_id}")
+                    print(f"Question ID from message: {question_id}")
                     player_number = 1 if role == "HUMAN" else 2  # HUMAN = Player 1, BOT = Player 2
                     await manager.send_answer_to_judge(text, room_name, player_number)
-                    print("📤 Answer sent to judge")
+                    print("Answer sent to judge")
 
                     try:
                         # Se non c'è question_id nel messaggio, ottienilo dal database
@@ -172,12 +171,12 @@ async def websocket_endpoint(websocket: WebSocket, room_name: str, client_id: in
                             
                             if last_question:
                                 question_id = last_question[0]
-                                print(f"🔍 Found question_id from database: {question_id}")
+                                print(f"Found question_id from database: {question_id}")
                             else:
-                                print("❌ No question found for this room")
+                                print("No question found for this room")
                                 continue  # Salta il salvataggio se non c'è domanda
                         
-                        print(f"💾 Creating answer with question_id: {question_id}")
+                        print(f"Creating answer with question_id: {question_id}")
                         answer_request = AnswerRequest(
                             question_id=question_id,
                             session_id=1,
@@ -187,9 +186,9 @@ async def websocket_endpoint(websocket: WebSocket, room_name: str, client_id: in
                             room_name=room_name 
                         )
                         saved_answer = create_answer(answer_request)
-                        print(f"✅ Answer saved with ID: {saved_answer.id}")
+                        print(f"Answer saved with ID: {saved_answer.id}")
                         
-                        # 🎯 CONTROLLA SE TUTTI HANNO RISPOSTO
+                        # CONTROLLA SE TUTTI HANNO RISPOSTO
                         conn = create_db_connection()
                         cursor = conn.cursor()
                         
@@ -204,25 +203,25 @@ async def websocket_endpoint(websocket: WebSocket, room_name: str, client_id: in
                         cursor.close()
                         conn.close()
                         
-                        print(f"📊 Risposte ricevute: {answer_count}/2")
+                        print(f"Risposte ricevute: {answer_count}/2")
                         
                         # Se abbiamo 2 risposte (HUMAN + BOT), tutti hanno risposto
                         if answer_count >= 2:
-                            print("🎉 Tutti i player hanno risposto!")
+                            print("Tutti i player hanno risposto!")
                             # Notifica il giudice che può continuare
                             await manager.send_to_judge({
                                 "type": "all_answered",
-                                "message": "✅ Tutti hanno risposto! Puoi inviare la prossima domanda."
+                                "message": "Tutti hanno risposto! Puoi inviare la prossima domanda."
                             }, room_name)
                         
                     except Exception as e:
-                        print(f"❌ Errore salvataggio risposta: {e}")
+                        print(f"Errore salvataggio risposta: {e}")
             
             except json.JSONDecodeError:
                 # Se non è JSON, trattalo come testo semplice (backward compatibility)
-                print(f"📨 Ricevuto testo semplice: {data} da {role}")
+                print(f"Ricevuto testo semplice: {data} da {role}")
                 if role == "JUDGE":
-                    print("🎯 JUDGE: Invio domanda ai player")
+                    print("JUDGE: Invio domanda ai player")
                     await manager.send_question_to_players(data, room_name)
                     
                     try:
@@ -232,13 +231,13 @@ async def websocket_endpoint(websocket: WebSocket, room_name: str, client_id: in
                             author_id=str(client_id),
                             session_id=1
                         )
-                        print('ciao salva')
+
                         saved_question = create_question(question_request)
-                        print(f"✅ Domanda salvata con ID: {saved_question.id}")
+                        print(f"Domanda salvata con ID: {saved_question.id}")
                     except Exception as e:
-                        print(f"❌ Errore salvataggio domanda: {e}")
+                        print(f"Errore salvataggio domanda: {e}")
                 else:
-                    print("🎮 PLAYER: Invio risposta al giudice")
+                    print("PLAYER: Invio risposta al giudice")
                     player_number = 1 if role == "HUMAN" else 2
                     await manager.send_answer_to_judge(data, room_name, player_number)
                     
@@ -271,12 +270,12 @@ async def websocket_endpoint(websocket: WebSocket, room_name: str, client_id: in
                                 room_name=room_name
                             )
                             create_answer(answer_request)
-                            print(f"✅ Risposta salvata per question_id: {last_question[0]}")
+                            print(f"Risposta salvata per question_id: {last_question[0]}")
                         else:
-                            print("❌ Nessuna domanda trovata per questa room")
+                            print("Nessuna domanda trovata per questa room")
                             
                     except Exception as e:
-                        print(f"❌ Errore salvataggio risposta: {e}")
+                        print(f"Errore salvataggio risposta: {e}")
     except WebSocketDisconnect:
         # Gestisce la disconnessione del client
         manager.disconnect(room_name, client_id)

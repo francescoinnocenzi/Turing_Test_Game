@@ -3,10 +3,10 @@ from fastapi import HTTPException
 from typing import Union, List, Tuple
 
 # Parametri di connessione al database
-DB_HOST = "mariadb"  # Forza TCP invece del socket
+DB_HOST = "mariadb"  # Nome del servizio del database
 DB_PORT = 3306  # Porta esposta dal docker-compose
-DB_USER = "user"  # User root dal docker-compose
-DB_PASSWORD = "pwd"  # Password root dal docker-compose
+DB_USER = "user"  # User dal docker-compose
+DB_PASSWORD = "pwd"  # Password dal docker-compose
 DB_NAME = "turing_game"
 
 def create_db_connection() -> mariadb.Connection:

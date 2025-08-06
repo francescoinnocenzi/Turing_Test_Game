@@ -258,9 +258,9 @@
         </div>
         
         <div class="question-form">
-            <form id="messageForm" onsubmit="return false;">
+            <form id="messageForm">
                 <input type="text" id="messageText" autocomplete="off" placeholder="💭 Scrivi una domanda per i partecipanti..." />
-                <button type="button" class="send-button" onclick="sendMessage(event)">📤 Invia Domanda</button>
+                <button type="submit" class="send-button">📤 Invia Domanda</button>
             </form>
         </div>
 
@@ -281,6 +281,9 @@
         let currentQuestion = null;
         let currentQuestionId = null;
         let pendingAnswers = new Set();
+
+        document.getElementById("messageForm").addEventListener("submit", sendMessage);
+
         
         // Override della funzione sendMessage per tracciare le domande
         function sendMessage(event) {
@@ -291,13 +294,15 @@
             }
             
             const input = document.getElementById("messageText");
+            const text = input.value.trim();
             
-            if (!input.value.trim()) {
+            if (!text) {
+                console.warn("Messaggio vuoto, non inviato");
                 return false;
             }
             
             if (ws && ws.readyState === WebSocket.OPEN) {
-                currentQuestion = input.value;
+                currentQuestion = text;
                 pendingAnswers = new Set([1, 2]); // Reset per entrambi i partecipanti
 
                 const message = {

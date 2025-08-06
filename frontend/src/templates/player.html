@@ -281,7 +281,7 @@
         <div class="answer-form">
             <form id="messageForm" onsubmit="return false;">
                 <input type="text" id="messageText" autocomplete="off" placeholder="💬 Scrivi la tua risposta qui..." />
-                <button type="button" class="send-button" onclick="sendMessage(event)">📤 Invia Risposta</button>
+                <button type="submit" class="send-button">📤 Invia Risposta</button>
             </form>
         </div>
         
@@ -295,6 +295,9 @@
     <script>
         // Variabili globali
         let currentQuestionId = null;
+        let currentAnswer = null;
+
+        document.getElementById('messageForm').addEventListener('submit', sendMessage);
 
         function sendMessage(event) {
             // Previeni qualsiasi comportamento di default
@@ -304,16 +307,19 @@
             }
             
             const input = document.getElementById("messageText");
+            const text = input.value.trim();
             
-            if (!input.value.trim()) {
+            if (!text) {
+                console.warn("Messaggio vuoto, non inviato");
                 return false;
             }
             
             if (ws && ws.readyState === WebSocket.OPEN) {
+                currentAnswer = text;
                 // Invia come oggetto JSON con tipo "answer"
                 const message = {
                     type: "answer", 
-                    text: input.value.trim()
+                    text: currentAnswer
                 };
                 
                 // Aggiungi question_id solo se disponibile
