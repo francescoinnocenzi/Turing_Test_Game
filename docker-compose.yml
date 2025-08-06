@@ -13,6 +13,11 @@ services:
     volumes:
       - ./mariadb_data:/var/lib/mysql:Z
       - ./mariadb_init/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ppassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build:
@@ -20,7 +25,9 @@ services:
       dockerfile: backend/Dockerfile
     ports:
       - "8003:8003"
-
+    depends_on:
+      mariadb:
+        condition: service_healthy
 
   frontend:
     build:
@@ -29,4 +36,5 @@ services:
     ports:
       - "8001:8001"
     depends_on:
-      - backend
+      backend:
+        condition: service_started
