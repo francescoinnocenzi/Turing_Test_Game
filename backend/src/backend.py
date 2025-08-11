@@ -1,12 +1,16 @@
 from fastapi import FastAPI, Request, WebSocketDisconnect, WebSocket, HTTPException, Form
 from typing import List
 import requests, json
+from pydantic import BaseModel
+
 
 from websocket import ConnectionManager
 from database.connection import create_db_connection
 from schemas.question import QuestionRequest, QuestionResponse
 from schemas.answer import AnswerRequest, AnswerResponse
-from schemas.session import SessionRequest, SessionResponse, SessionDetailsResponse
+from schemas.api_models import RequestAPI, ResponseAPI
+from utils.emoji import remove_emoji
+
 import mariadb
 from pydantic import BaseModel
 
@@ -281,3 +285,60 @@ async def websocket_endpoint(websocket: WebSocket, room_name: str, client_id: in
         manager.disconnect(room_name, client_id)
         # Notifica a tutti i client che il client si è disconnesso
         await manager.broadcast(f"Client #{client_id} left the {room_name}", room_name)
+
+chat_history: list[dict]= []
+
+@app.post("/ask")
+def chat_with_memory(request: RequestAPI):
+
+    global chat_history
+
+    chat_history.append({"role": "user", "content": request.question})
+
+    url = "http://ollama:11434/api/chat"
+
+    system_prompt = {
+        "role": "system",
+        "content": (
+            "Rispondi come un essere umano. Stile naturale, diretto e realistico. Chat informale: risposte brevi, massimo  10 parole. Evita frasi inutili o generiche.  Non dire mai che sei un'IA. Se ti chiedono nome, età, luogo o famiglia, inventa risposte credibili. Non dire mai che non sai o rifiutare di rispondere."
+        )
+    }
+
+    # "content": (
+    #         "Rispondi come un essere umano. Usa uno stile naturale, diretto e realistico. "
+    #         "Non usare emoji, simboli speciali o Markdown. "
+    #         "Massimo 150 caratteri per risposta. "
+    #         "Evita frasi inutili o generiche. "
+    #         "Non dire mai che sei un'IA. "
+    #         "Se ti chiedono il nome, età, luogo di nascita o famiglia, inventa risposte credibili. "
+    #         "Non dire mai che non sai. Non rifiutare mai di rispondere."
+    #     )
+
+    messages = [system_prompt] + chat_history  # prepend il system
+
+    payload = {
+        "model": "gemma2:2b",
+        "messages": messages,
+        "stream": False
+    }
+
+    try:
+
+        response = requests.post(url, json=payload)
+        response.raise_for_status()
+        risposta_api = response.json()
+        
+        print("Payload inviato a Ollama:\n", json.dumps(payload, indent=2))
+
+        answer = risposta_api["message"]["content"]
+        answer = remove_emoji(answer)
+        
+        chat_history.append({"role": "assistant", "content": answer})
+
+        print(chat_history)
+
+        return ResponseAPI(answer=answer, chat_history=chat_history)
+        
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Errore durante richiesta post {e}")
+    
