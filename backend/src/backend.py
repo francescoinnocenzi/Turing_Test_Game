@@ -97,6 +97,17 @@ def create_answer(request: AnswerRequest):
         cursor.close()
         conn.close()
 
+# Funzione per ottenere risposta dal LLM
+async def get_llm_response(question: str):
+    """Funzione che chiama l'API LLM per ottenere una risposta alla domanda"""
+    request_data = RequestAPI(question=question)
+    try:
+        response = chat_with_memory(request_data)
+        return response.answer
+    except Exception as e:
+        print(f"❌ Errore nella chiamata a LLM: {e}")
+        return "Mi dispiace, non ho capito la domanda."
+
 # Endpoint WebSocket per gestire la comunicazione in tempo reale
 @app.websocket("/ws/{room_name}/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, room_name: str, client_id: int):
@@ -142,9 +153,52 @@ async def websocket_endpoint(websocket: WebSocket, room_name: str, client_id: in
                             "question_id": saved_question.id
                         }))
                         print("Confirmation sent to judge")
+                        
+                        # Ottieni risposta automatica dal bot LLM
+                        print("🤖 Richiedendo risposta automatica al bot...")
+                        bot_response = await get_llm_response(text)
+                        print(f"🤖 Risposta bot: {bot_response}")
+
+                        # Salva la risposta del bot
+                        bot_answer_request = AnswerRequest(
+                            question_id=saved_question.id,
+                            session_id=1,
+                            text=bot_response,
+                            author_id="bot-auto",
+                            author_type="BOT",
+                            room_name=room_name
+                        )
+                        saved_bot_answer = create_answer(bot_answer_request)
+                        print(f"Bot answer saved with ID: {saved_bot_answer.id}")
+
+                        # Invia la risposta del bot al giudice
+                        await manager.send_answer_to_judge(bot_response, room_name, 2)  # 2 = BOT
+                        print("Bot answer sent to judge")
+
+                        # Controlla se abbiamo già una risposta HUMAN
+                        conn = create_db_connection()
+                        cursor = conn.cursor()
+                        
+                        cursor.execute("""
+                            SELECT COUNT(*) 
+                            FROM answers 
+                            WHERE question_id = ? AND author_type = 'HUMAN'
+                        """, (saved_question.id,))
+                        
+                        human_answers = cursor.fetchone()[0]
+                        cursor.close()
+                        conn.close()
+                        
+                        # Se entrambi (umano e bot) hanno risposto, notifica il giudice
+                        if human_answers > 0:
+                            await manager.send_to_judge({
+                                "type": "all_answered",
+                                "message": "Tutti hanno risposto! Puoi inviare la prossima domanda."
+                            }, room_name)
+                            print("Notifica 'all_answered' inviata al giudice")
 
                     except Exception as e:
-                        print(f"Errore durante il salvataggio della domanda: {e}")
+                        print(f"Errore durante il processo: {e}")
                 
                 elif message_type=="answer":
                     print("PLAYER ANSWER: Processing player response")

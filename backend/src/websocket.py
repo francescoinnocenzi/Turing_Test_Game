@@ -95,32 +95,28 @@ class ConnectionManager:
 
     async def send_answer_to_judge(self, answer: str, room_name: str, player_number: int):
         """Invia una risposta dal player al giudice"""
-        room = self.rooms.get(room_name, {})
-        message = json.dumps({
-            "type": "answer",
-            "text": answer,
-            "from": player_number  # 1 per HUMAN, 2 per BOT
-        })
-        
-        print(f"SENDING ANSWER '{answer}' from player {player_number} to judge in room {room_name}")
-        
-        for client_id, client_data in room.items():
-            # Invia solo al giudice
+        # Trova tutti i client con ruolo JUDGE nella room
+        for client_id, client_data in self.rooms.get(room_name, {}).items():
             if client_data["role"] == "JUDGE":
-                await client_data["ws"].send_text(message)
-                print(f"  → Sent to JUDGE (client {client_id})")
-                break
+                # Invia un messaggio strutturato in JSON invece di testo semplice
+                try:
+                    message = {
+                        "type": "player_answer",
+                        "player": player_number,
+                        "text": answer
+                    }
+                    await client_data["ws"].send_text(json.dumps(message))
+                    print(f"Answer sent to judge (client {client_id})")
+                except Exception as e:
+                    print(f"Error sending to judge: {e}")
 
-    async def send_to_judge(self, message_data: dict, room_name: str):
-        """Invia un messaggio generico al giudice"""
-        room = self.rooms.get(room_name, {})
-        message = json.dumps(message_data)
-        
-        print(f"SENDING MESSAGE to judge in room {room_name}: {message_data}")
-        
-        for client_id, client_data in room.items():
-            # Invia solo al giudice
+    async def send_to_judge(self, message: dict, room_name: str):
+        """Invia un messaggio al giudice"""
+        # Trova tutti i client con ruolo JUDGE nella room
+        for client_id, client_data in self.rooms.get(room_name, {}).items():
             if client_data["role"] == "JUDGE":
-                await client_data["ws"].send_text(message)
-                print(f"Sent to JUDGE (client {client_id})")
-                break
+                try:
+                    await client_data["ws"].send_text(json.dumps(message))
+                    print(f"Message sent to judge (client {client_id})")
+                except Exception as e:
+                    print(f"Error sending to judge: {e}")
