@@ -237,202 +237,7 @@
         .chat-box::-webkit-scrollbar-thumb:hover {
             background: #0984e3;
         }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>👨‍⚖️ WebSocket Chat - Giudice</h1>
-        
-        <div class="status-info">
-            Your ID: <span id="ws-id"></span> | Room: <span id="room-id">Seleziona una stanza</span>
-        </div>
-        
-        <div class="room-selection">
-            <p>🏠 Scegli la stanza per iniziare:</p>
-            <div class="room-buttons">
-                <button type="button" class="room-button" id="room1">📍 Stanza 1</button>
-                <button type="button" class="room-button" id="room2">📍 Stanza 2</button>
-                <button type="button" class="room-button" id="room3">📍 Stanza 3</button>
-            </div>
-        </div>
-        
-        <div class="question-form">
-            <form id="messageForm">
-                <input type="text" id="messageText" autocomplete="off" placeholder="💭 Scrivi una domanda per i partecipanti..." />
-                <button type="submit" class="send-button">📤 Invia Domanda</button>
-            </form>
-        </div>
 
-        <div class="dual-chat">
-            <div class="chat-box">
-                <h3>🟢 Risposte da Partecipante HUMAN</h3>
-                <ul id='messages1'></ul>
-            </div>
-            <div class="chat-box">
-                <h3>🔴 Risposte da Partecipante BOT</h3>
-                <ul id='messages2'></ul>
-            </div>
-        </div>
-    </div>
-
-    <script src="../static/chat.js"></script>
-    <script>
-        let currentQuestion = null;
-        let currentQuestionId = null;
-        let pendingAnswers = new Set();
-
-        document.getElementById("messageForm").addEventListener("submit", function(event) {
-            event.preventDefault();
-            sendMessage(event);
-        });
-        
-        // Override della funzione sendMessage per tracciare le domande
-        function sendMessage(event) {
-            // Previeni qualsiasi comportamento di default
-            if (event) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
-            
-            const input = document.getElementById("messageText");
-            const text = input.value.trim();
-            
-            if (!text) {
-                return false;
-            }
-            
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                currentQuestion = text;
-                pendingAnswers = new Set([1, 2]); // Aspettiamo risposte da player 1 (HUMAN) e 2 (BOT)
-
-                // Non cancellare le chat box per mantenere la cronologia
-                // document.getElementById('messages1').innerHTML = '';
-                // document.getElementById('messages2').innerHTML = '';
-
-                const message = {
-                    type: "question",
-                    text: currentQuestion
-                }
-
-                try {
-                    ws.send(JSON.stringify(message));
-                    input.value = '';
-                    
-                    // Aggiungi la domanda al messaggio del giudice
-                    const questionElement = document.createElement('div');
-                    questionElement.classList.add('judge-question');
-                    
-                    // Aggiungi timestamp per meglio tracciare la cronologia
-                    const timestamp = new Date().toLocaleTimeString();
-                    questionElement.innerHTML = `
-                        <div class="question-timestamp">${timestamp}</div>
-                        <div class="question-text"><strong>Tua domanda:</strong> ${text}</div>
-                    `;
-                    
-                    document.getElementById('messages1').appendChild(questionElement.cloneNode(true));
-                    document.getElementById('messages2').appendChild(questionElement.cloneNode(true));
-                    
-                    console.log("Domanda inviata:", text);
-                } catch (error) {
-                    console.error("Errore nell'invio:", error);
-                }
-            } else {
-                console.warn("WebSocket non connesso. Seleziona prima una stanza!");
-                alert("Seleziona prima una stanza!");
-            }
-        }
-
-        // Override della funzione onmessage per gestire i messaggi
-        ws_onmessage_override = function(event) {
-            console.log("Messaggio ricevuto:", event.data);
-            
-            try {
-                const data = JSON.parse(event.data);
-                
-                // Se riceviamo l'ID della domanda
-                if (data.type === "question_saved") {
-                    currentQuestionId = data.question_id;
-                    console.log("ID domanda salvato:", currentQuestionId);
-                }
-                
-                // Se riceviamo una risposta da un player
-                else if (data.type === "player_answer") {
-                    const playerNumber = data.player;
-                    const answer = data.text;
-                    
-                    const messagesList = document.getElementById(`messages${playerNumber}`);
-                    
-                    // Crea un blocco di risposta con separatore per distinguerla meglio
-                    const answerElement = document.createElement('li');
-                    answerElement.classList.add('player-answer');
-                    
-                    // Aggiungi un riferimento alla domanda corrente per chiarezza
-                    const timestamp = new Date().toLocaleTimeString();
-                    answerElement.innerHTML = `
-                        <div class="answer-timestamp">${timestamp}</div>
-                        <div class="question-reference">In risposta a: "${currentQuestion}"</div>
-                        <div class="answer-text">${answer}</div>
-                    `;
-                    
-                    messagesList.appendChild(answerElement);
-                    
-                    // Aggiungi un separatore per migliorare la leggibilità
-                    const separator = document.createElement('div');
-                    separator.className = 'chat-separator';
-                    messagesList.appendChild(separator);
-                    
-                    // Scorri automaticamente alla fine
-                    messagesList.scrollTop = messagesList.scrollHeight;
-                    
-                    pendingAnswers.delete(playerNumber);
-                    console.log(`Risposta ricevuta da player ${playerNumber}:`, answer);
-                }
-                
-                // Se tutti hanno risposto
-                else if (data.type === "all_answered") {
-                    console.log("Tutti i player hanno risposto!");
-                    
-                    // Abilita il form per la prossima domanda
-                    document.getElementById("messageText").disabled = false;
-                    document.querySelector(".send-button").disabled = false;
-                    
-                    // Mostra una notifica
-                    const notification = document.createElement('div');
-                    notification.classList.add('notification');
-                    notification.textContent = "✅ " + data.message;
-                    document.querySelector('.container').appendChild(notification);
-                    
-                    // Aggiungi un separatore più evidente per indicare il completamento di un turno
-                    const separator1 = document.createElement('div');
-                    separator1.className = 'round-separator';
-                    document.getElementById('messages1').appendChild(separator1);
-                    
-                    const separator2 = document.createElement('div');
-                    separator2.className = 'round-separator';
-                    document.getElementById('messages2').appendChild(separator2);
-                    
-                    // Scorri automaticamente verso il basso
-                    document.getElementById('messages1').scrollTop = document.getElementById('messages1').scrollHeight;
-                    document.getElementById('messages2').scrollTop = document.getElementById('messages2').scrollHeight;
-                    
-                    // Rimuovi la notifica dopo 5 secondi
-                    setTimeout(() => {
-                        notification.remove();
-                    }, 5000);
-                }
-                
-            } catch (e) {
-                console.error("Errore parsing JSON:", e);
-                
-                // Gestisci messaggi di testo semplice (backward compatibility)
-                const messageElement = document.createElement('li');
-                messageElement.textContent = event.data;
-                document.getElementById('messages1').appendChild(messageElement);
-            }
-        };
-    </script>
-
-    <style>
         /* Stili per le domande e risposte */
         .judge-question {
             background-color: #f5f5f5;
@@ -551,5 +356,195 @@
             to { opacity: 0; transform: translateY(20px); }
         }
     </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👨‍⚖️ WebSocket Chat - Giudice</h1>
+        
+        <div class="status-info">
+            Your ID: <span id="ws-id"></span> | Room: <span id="room-id">Seleziona una stanza</span>
+        </div>
+        
+        <div class="room-selection">
+            <p>🏠 Scegli la stanza per iniziare:</p>
+            <div class="room-buttons">
+                <button type="button" class="room-button" id="room1">📍 Stanza 1</button>
+                <button type="button" class="room-button" id="room2">📍 Stanza 2</button>
+                <button type="button" class="room-button" id="room3">📍 Stanza 3</button>
+            </div>
+        </div>
+        
+        <div class="question-form">
+            <form id="messageForm">
+                <input type="text" id="messageText" autocomplete="off" placeholder="💭 Scrivi una domanda per i partecipanti..." />
+                <button type="submit" class="send-button">📤 Invia Domanda</button>
+            </form>
+        </div>
+
+        <div class="dual-chat">
+            <div class="chat-box">
+                <h3>🟢 Risposte da Partecipante HUMAN</h3>
+                <ul id='messages1'></ul>
+            </div>
+            <div class="chat-box">
+                <h3>🔴 Risposte da Partecipante BOT</h3>
+                <ul id='messages2'></ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="../static/chat.js"></script>
+    <script>
+        let currentQuestion = null;
+        let currentQuestionId = null;
+
+        document.getElementById("messageForm").addEventListener("submit", function(event) {
+            event.preventDefault();
+            sendMessage(event);
+        });
+        
+        // Override della funzione sendMessage per tracciare le domande
+        function sendMessage(event) {
+            // Previeni qualsiasi comportamento di default
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            const input = document.getElementById("messageText");
+            const text = input.value.trim();
+            
+            if (!text) {
+                return false;
+            }
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                currentQuestion = text;
+
+                // Non cancellare le chat box per mantenere la cronologia
+                // document.getElementById('messages1').innerHTML = '';
+                // document.getElementById('messages2').innerHTML = '';
+
+                const message = {
+                    type: "question",
+                    text: currentQuestion
+                }
+
+                try {
+                    ws.send(JSON.stringify(message));
+                    input.value = '';
+                    
+                    // Aggiungi la domanda al messaggio del giudice
+                    const questionElement = document.createElement('div');
+                    questionElement.classList.add('judge-question');
+                    
+                    // Aggiungi timestamp per meglio tracciare la cronologia
+                    const timestamp = new Date().toLocaleTimeString();
+                    questionElement.innerHTML = `
+                        <div class="question-timestamp">${timestamp}</div>
+                        <div class="question-text"><strong>Tua domanda:</strong> ${text}</div>
+                    `;
+                    
+                    document.getElementById('messages1').appendChild(questionElement.cloneNode(true));
+                    document.getElementById('messages2').appendChild(questionElement.cloneNode(true));
+                    
+                    console.log("Domanda inviata:", text);
+                } catch (error) {
+                    console.error("Errore nell'invio:", error);
+                }
+            } else {
+                console.warn("WebSocket non connesso. Seleziona prima una stanza!");
+                alert("Seleziona prima una stanza!");
+            }
+        }
+
+        // Override della funzione onmessage per gestire i messaggi
+        ws_onmessage_override = function(event) {
+            console.log("Messaggio ricevuto:", event.data);
+            
+            try {
+                const data = JSON.parse(event.data);
+                
+                // Se riceviamo l'ID della domanda
+                if (data.type === "question_saved") {
+                    currentQuestionId = data.question_id;
+                    console.log("ID domanda salvato:", currentQuestionId);
+                }
+                
+                // Se riceviamo una risposta da un player
+                else if (data.type === "player_answer") {
+                    const playerNumber = data.player;
+                    const answer = data.text;
+                    
+                    const messagesList = document.getElementById(`messages${playerNumber}`);
+                    
+                    // Crea un blocco di risposta con separatore per distinguerla meglio
+                    const answerElement = document.createElement('li');
+                    answerElement.classList.add('player-answer');
+                    
+                    // Aggiungi un riferimento alla domanda corrente per chiarezza
+                    const timestamp = new Date().toLocaleTimeString();
+                    answerElement.innerHTML = `
+                        <div class="answer-timestamp">${timestamp}</div>
+                        <div class="question-reference">In risposta a: "${currentQuestion}"</div>
+                        <div class="answer-text">${answer}</div>
+                    `;
+                    
+                    messagesList.appendChild(answerElement);
+                    
+                    // Aggiungi un separatore per migliorare la leggibilità
+                    const separator = document.createElement('div');
+                    separator.className = 'chat-separator';
+                    messagesList.appendChild(separator);
+                    
+                    // Scorri automaticamente alla fine
+                    messagesList.scrollTop = messagesList.scrollHeight;
+                    
+                    console.log(`Risposta ricevuta da player ${playerNumber}:`, answer);
+                }
+                
+                // Se tutti hanno risposto
+                else if (data.type === "all_answered") {
+                    console.log("Tutti i player hanno risposto!");
+                    
+                    // Abilita il form per la prossima domanda
+                    document.getElementById("messageText").disabled = false;
+                    document.querySelector(".send-button").disabled = false;
+                    
+                    // Mostra una notifica
+                    const notification = document.createElement('div');
+                    notification.classList.add('notification');
+                    notification.textContent = "✅ " + data.message;
+                    document.querySelector('.container').appendChild(notification);
+                    
+                    // Aggiungi un separatore più evidente per indicare il completamento di un turno
+                    const separator1 = document.createElement('div');
+                    separator1.className = 'round-separator';
+                    document.getElementById('messages1').appendChild(separator1);
+                    
+                    const separator2 = document.createElement('div');
+                    separator2.className = 'round-separator';
+                    document.getElementById('messages2').appendChild(separator2);
+                    
+                    // Scorri automaticamente verso il basso
+                    document.getElementById('messages1').scrollTop = document.getElementById('messages1').scrollHeight;
+                    document.getElementById('messages2').scrollTop = document.getElementById('messages2').scrollHeight;
+                    
+                    // Rimuovi la notifica dopo 5 secondi
+                    setTimeout(() => {
+                        notification.remove();
+                    }, 5000);
+                }
+                
+            } catch (e) {
+                console.error("Errore parsing JSON:", e);
+                
+                // Gestisci messaggi di testo semplice (backward compatibility)
+                const messageElement = document.createElement('li');
+                messageElement.textContent = event.data;
+                document.getElementById('messages1').appendChild(messageElement);
+            }
+        };
+    </script>
 </body>
 </html>
