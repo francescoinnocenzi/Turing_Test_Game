@@ -97,6 +97,36 @@ def create_answer(request: AnswerRequest):
         cursor.close()
         conn.close()
 
+# Funzione per verificare se tutti hanno risposto e inviare notifica
+async def check_all_answered(question_id: int, room_name: str):
+    """Verifica se sia l'umano che il bot hanno risposto alla domanda e invia notifica al giudice"""
+    conn = create_db_connection()
+    cursor = conn.cursor()
+    
+    # Conta le risposte distinte per tipo (HUMAN/BOT)
+    cursor.execute("""
+        SELECT COUNT(DISTINCT author_type) as unique_answers
+        FROM answers 
+        WHERE question_id = ?
+    """, (question_id,))
+    
+    answer_count = cursor.fetchone()[0]
+    cursor.close()
+    conn.close()
+    
+    print(f"Risposte ricevute: {answer_count}/2")
+    
+    # Se abbiamo 2 risposte (HUMAN + BOT), tutti hanno risposto alla stessa domanda
+    if answer_count >= 2:
+        print("Tutti i player hanno risposto!")
+        # Notifica il giudice che può continuare
+        await manager.send_to_judge({
+            "type": "all_answered",
+            "message": "Tutti hanno risposto! Puoi inviare la prossima domanda."
+        }, room_name)
+        return True
+    return False
+
 # Funzione per ottenere risposta dal LLM
 async def get_llm_response(question: str):
     """Funzione che chiama l'API LLM per ottenere una risposta alla domanda"""
@@ -175,27 +205,8 @@ async def websocket_endpoint(websocket: WebSocket, room_name: str, client_id: in
                         await manager.send_answer_to_judge(bot_response, room_name, 2)  # 2 = BOT
                         print("Bot answer sent to judge")
 
-                        # Controlla se abbiamo già una risposta HUMAN
-                        conn = create_db_connection()
-                        cursor = conn.cursor()
-                        
-                        cursor.execute("""
-                            SELECT COUNT(*) 
-                            FROM answers 
-                            WHERE question_id = ? AND author_type = 'HUMAN'
-                        """, (saved_question.id,))
-                        
-                        human_answers = cursor.fetchone()[0]
-                        cursor.close()
-                        conn.close()
-                        
-                        # Se entrambi (umano e bot) hanno risposto, notifica il giudice
-                        if human_answers > 0:
-                            await manager.send_to_judge({
-                                "type": "all_answered",
-                                "message": "Tutti hanno risposto! Puoi inviare la prossima domanda."
-                            }, room_name)
-                            print("Notifica 'all_answered' inviata al giudice")
+                        # Usa la funzione centralizzata per verificare se tutti hanno risposto
+                        await check_all_answered(saved_question.id, room_name)
 
                     except Exception as e:
                         print(f"Errore durante il processo: {e}")
@@ -246,31 +257,8 @@ async def websocket_endpoint(websocket: WebSocket, room_name: str, client_id: in
                         saved_answer = create_answer(answer_request)
                         print(f"Answer saved with ID: {saved_answer.id}")
                         
-                        # CONTROLLA SE TUTTI HANNO RISPOSTO
-                        conn = create_db_connection()
-                        cursor = conn.cursor()
-                        
-                        # Conta le risposte per questa domanda
-                        cursor.execute("""
-                            SELECT COUNT(DISTINCT author_type) as unique_answers
-                            FROM answers 
-                            WHERE question_id = ?
-                        """, (question_id,))
-                        
-                        answer_count = cursor.fetchone()[0]
-                        cursor.close()
-                        conn.close()
-                        
-                        print(f"Risposte ricevute: {answer_count}/2")
-                        
-                        # Se abbiamo 2 risposte (HUMAN + BOT), tutti hanno risposto
-                        if answer_count >= 2:
-                            print("Tutti i player hanno risposto!")
-                            # Notifica il giudice che può continuare
-                            await manager.send_to_judge({
-                                "type": "all_answered",
-                                "message": "Tutti hanno risposto! Puoi inviare la prossima domanda."
-                            }, room_name)
+                        # Usa la funzione centralizzata per verificare se tutti hanno risposto
+                        await check_all_answered(question_id, room_name)
                         
                     except Exception as e:
                         print(f"Errore salvataggio risposta: {e}")
@@ -368,7 +356,8 @@ def chat_with_memory(request: RequestAPI):
     #         "Non dire mai che non sai. Non rifiutare mai di rispondere."
     #     )
 
-    messages = [system_prompt] + chat_history  # prepend il system
+    # Mettendo il system prompt all'inizio, il modello LLM lo considera come una direttiva ad alta priorità che deve guidare tutte le sue risposte.
+    messages: list = [system_prompt] + chat_history  # prepend il system
 
     payload = {
         "model": "gemma2:2b",

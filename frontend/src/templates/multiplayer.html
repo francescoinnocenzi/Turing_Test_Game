@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Turing Test Game - Home</title>
+    <title>Turing Test Game - Multiplayer</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -37,13 +37,13 @@
             line-height: 1.4;
         }
         
-        .mode-buttons {
+        .role-buttons {
             display: flex;
             flex-direction: column;
             gap: 1.5rem;
         }
         
-        .mode-button {
+        .role-button {
             display: block;
             padding: 1.5rem 2rem;
             text-decoration: none;
@@ -57,33 +57,48 @@
             overflow: hidden;
         }
         
-        .multiplayer-button {
+        .judge-button {
             background: linear-gradient(135deg, #ff6b6b, #ee5a24);
             color: white;
             box-shadow: 0 8px 20px rgba(255, 107, 107, 0.3);
         }
         
-        .multiplayer-button:hover {
+        .judge-button:hover {
             transform: translateY(-3px);
             box-shadow: 0 12px 25px rgba(255, 107, 107, 0.4);
         }
         
-        .singleplayer-button {
+        .player-button {
             background: linear-gradient(135deg, #4834d4, #686de0);
             color: white;
             box-shadow: 0 8px 20px rgba(72, 52, 212, 0.3);
         }
         
-        .singleplayer-button:hover {
+        .player-button:hover {
             transform: translateY(-3px);
             box-shadow: 0 12px 25px rgba(72, 52, 212, 0.4);
         }
         
-        .mode-description {
+        .role-description {
             font-size: 0.9rem;
             opacity: 0.9;
             margin-top: 0.5rem;
             font-weight: normal;
+        }
+        
+        .back-link {
+            margin-top: 2rem;
+            display: inline-block;
+            text-decoration: none;
+            color: #764ba2;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .back-link:hover {
+            color: #667eea;
+            text-decoration: underline;
         }
         
         .footer {
@@ -101,7 +116,7 @@
                 font-size: 2rem;
             }
             
-            .mode-button {
+            .role-button {
                 padding: 1.2rem 1.5rem;
                 font-size: 1.1rem;
             }
@@ -110,30 +125,31 @@
 </head>
 <body>
     <div class="container">
-        <h1>🤖 Turing Test Game</h1>
+        <h1>👥 Modalità Multiplayer</h1>
         <div class="subtitle">
-            Benvenuto nel gioco del test di Turing.<br>
-            Scegli una modalità per iniziare:
+            Scegli il tuo ruolo per giocare con un altro partecipante:
         </div>
         
-        <div class="mode-buttons">
-            <a href="/multiplayer" class="mode-button multiplayer-button">
-                👤 👤 MULTIPLAYER
-                <div class="mode-description">
-                    Gioca con un altro giocatore in tempo reale
+        <div class="role-buttons">
+            <a href="/judge" class="role-button judge-button">
+                👨‍⚖️ GIUDICE
+                <div class="role-description">
+                    Fai domande e valuta le risposte dei partecipanti
                 </div>
             </a>
             
-            <a href="/singleplayer" class="mode-button singleplayer-button">
-                👤 SINGLEPLAYER
-                <div class="mode-description">
-                    Gioca da solo in diverse modalità
+            <a href="/player" class="role-button player-button">
+                👤 PARTECIPANTE
+                <div class="role-description">
+                    Rispondi alle domande del giudice
                 </div>
             </a>
         </div>
         
+        <a href="/" class="back-link">← Torna alla Home</a>
+        
         <div class="footer">
-            Seleziona una modalità per continuare
+            Seleziona un ruolo per accedere all'interfaccia di chat
         </div>
     </div>
 </body>
