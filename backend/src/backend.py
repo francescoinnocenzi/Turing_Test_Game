@@ -360,7 +360,7 @@ def chat_with_memory(request: RequestAPI):
     messages: list = [system_prompt] + chat_history  # prepend il system
 
     payload = {
-        "model": "gemma2:2b",
+        "model": "gemma2:2b-instruct-q2_K", #Versione ottimizzata di gemma2:2b
         "messages": messages,
         "stream": False
     }
