@@ -384,4 +384,89 @@ def chat_with_memory(request: RequestAPI):
         
     except requests.RequestException as e:
         raise HTTPException(status_code=500, detail=f"Errore durante richiesta post {e}")
-    
+
+from sentence_transformers import SentenceTransformer, util
+import torch
+
+# Modello pre-addestrato leggero
+model = SentenceTransformer("nickprock/sentence-bert-base-italian-uncased")
+
+@app.post("/trova_simile")
+async def trova_simile(request: QuestionRequest):
+    #Connessione al database per prendere domande 
+    conn = create_db_connection()
+    cursor = conn.cursor()
+    input_frase = request.text #domada inserita in input
+    soglia_similarità = 0.89
+    try:
+        cursor.execute("""
+            SELECT id,text
+            FROM questions
+            """
+        )
+        #lista di coppie trovate (id,question)
+        frasi_trovate = cursor.fetchall() # [(1,"ciao"),(2,"prova")...]
+        print(input_frase,frasi_trovate)
+        if not frasi_trovate:
+            #se non trovo domanda simile allora ne creo una nuova 
+            risposta_nuova = await get_llm_response(input_frase)
+
+            return {
+            "frase_input": input_frase,
+            "frase_simile": None,
+            "risposta_trovata": risposta_nuova,
+            "similarità": 0.0
+            }
+        #lista di sole question trovate
+        frasi_db = [row[1] for row in frasi_trovate]
+
+        # Embedding della frase in ingresso
+        embedding_input = model.encode(input_frase, convert_to_tensor=True)
+
+        # Embeddings frasi da DB
+        embeddings_db = model.encode(frasi_db, convert_to_tensor=True)
+
+        # Calcolo similarità coseno sulle frasi input e database
+        cosine_scores = util.cos_sim(embedding_input, embeddings_db)
+
+        # Trovo indice della frase più simile
+        best_idx = cosine_scores.argmax().item() #indice frase piu siile
+        best_score = cosine_scores[0][best_idx].item() #score frase piu simile
+        best_sentence = frasi_db[best_idx] #frase piu simile
+        best_id = frasi_trovate[best_idx][0] # id frase piu simile
+        #cerco una risposta possibile della domanda piu simile
+
+        cursor.execute("""
+            SELECT id,text
+            FROM answers
+            WHERE question_id = ?
+            ORDER BY RAND()
+            LIMIT 1
+            """, (best_id,)
+        )
+        #coppia (id, risposta) casuale trovata
+        coppia_trovata = cursor.fetchone() # 
+        risposta_trovata = coppia_trovata[1] if coppia_trovata else None; #nel caso non trova nulla da None
+    except mariadb.Error as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+    if best_score > soglia_similarità :
+        return {
+            "frase_input": input_frase,
+            "frase_simile": best_sentence,
+            "risposta_trovata": risposta_trovata,
+            "similarità": best_score
+        }
+    else:
+            risposta_nuova = await get_llm_response(input_frase)
+
+            return {
+            "frase_input": input_frase,
+            "frase_simile": None,
+            "risposta_trovata": risposta_nuova,
+            "similarità": 0.0
+            }
+        
