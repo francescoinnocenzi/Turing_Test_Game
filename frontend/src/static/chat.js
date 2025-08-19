@@ -11,7 +11,7 @@ function setupWebSocket(selectedRoom) {
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.close(); // Questo innesca WebSocketDisconnect sul server
     }
-
+    
     ws = new WebSocket(`ws://localhost:8003/ws/${selectedRoom}/${client_id}`);
 
     ws.onmessage = function(event) {

@@ -1,11 +1,11 @@
 services:
     ollama:
-        image: ollama/ollama
+        image: ollama/ollama:latest
         ports:
             - "11434:11434"
         volumes:
             - ollama_models:/root/.ollama
-
+            - ./models:/models
     mariadb:
         image: mariadb:11.7.2-ubi9
         container_name: mariadb-turing

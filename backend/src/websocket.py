@@ -15,7 +15,7 @@ class ConnectionManager:
         #  "room2": { 3: {"ws": websocket_obj3, "role": "JUDGE"},} 
         # }
 
-    async def connect(self, room_name: str, websocket: WebSocket, client_id: int):
+    async def connect(self, room_name: str, websocket: WebSocket, client_id: int, role: str):
         # Accetta una nuova connessione WebSocket
         print(f"STARTING CONNECTION: room={room_name}, client={client_id}")
         await websocket.accept()
@@ -28,16 +28,9 @@ class ConnectionManager:
         room = self.rooms[room_name]
 
         if client_id not in room:
-            role_index = len(room)
-            print(f"ROLE INDEX: {role_index} for client {client_id}")
-            if role_index < len(DEFAULT_ROLES):
-                role = DEFAULT_ROLES[role_index]
-            else:
-                role = "SPECTATOR"
-            
             room[client_id] = {
                 "ws": websocket,
-                "role": role
+                "role": role.upper()
             }
             
             print(f"ASSIGNED ROLE: Client {client_id} → {role}")
@@ -120,3 +113,22 @@ class ConnectionManager:
                     print(f"Message sent to judge (client {client_id})")
                 except Exception as e:
                     print(f"Error sending to judge: {e}")
+    # ...existing code...
+
+    async def send_judgment_to_all(self, judgment: str, room_name: str):
+        """Invia il giudizio finale a tutti i client nella room"""
+        room = self.rooms.get(room_name, {})
+        message = json.dumps({
+            "type": "final_judgment",
+            "judgment": judgment
+        })
+        
+        print(f"SENDING JUDGMENT to all clients in room {room_name}")
+        
+        for client_id, client_data in room.items():
+            try:
+                await client_data["ws"].send_text(message)
+                print(f"  → Judgment sent to client {client_id} ({client_data['role']})")
+            except Exception as e:
+                print(f"Error sending judgment to client {client_id}: {e}")
+
