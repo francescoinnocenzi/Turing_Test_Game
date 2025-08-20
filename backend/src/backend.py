@@ -654,7 +654,7 @@ async def trova_simile(request: QuestionRequest):
     conn = create_db_connection()
     cursor = conn.cursor()
     input_frase = request.text #domada inserita in input
-    soglia_similarità = 0.89
+    soglia_similarità = 0.8
     try:
         cursor.execute("""
             SELECT id,text
@@ -710,6 +710,7 @@ async def trova_simile(request: QuestionRequest):
     finally:
         cursor.close()
         conn.close()
+    print(f"BEST SCORE {best_score}")
     if best_score > soglia_similarità :
         return {
             "frase_input": input_frase,

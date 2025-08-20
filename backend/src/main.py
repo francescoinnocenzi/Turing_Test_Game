@@ -1,4 +1,6 @@
 import uvicorn
+from backend import app
+
 
 def main():
     """
@@ -8,7 +10,7 @@ def main():
     (accessibile da qualsiasi dispositivo) e sulla porta 8003.
     """
     
-    uvicorn.run("backend:app", host="0.0.0.0", port=8003, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=8003)
 
 if __name__ == '__main__':
     main()

@@ -1,4 +1,5 @@
 import uvicorn
+from frontend import app
 
 def main():
     """
@@ -8,7 +9,7 @@ def main():
     (accessibile da qualsiasi host) e sulla porta 8001.
     """
     
-    uvicorn.run("frontend:app", host="0.0.0.0", port=8001, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=8001)
 
 if __name__ == '__main__':
     main()
