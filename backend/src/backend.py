@@ -439,7 +439,7 @@ def chat_with_memory(request: RequestAPI):
     messages: list = [system_prompt] + chat_history  # prepend il system
 
     payload = {
-        "model": "gemma2:2b-instruct-q2_K", #Versione ottimizzata di gemma2:2b
+        "model": "gemma2:2b", #Versione ottimizzata di gemma2:2b
         "messages": messages,
         "stream": False
     }
@@ -463,4 +463,267 @@ def chat_with_memory(request: RequestAPI):
         
     except requests.RequestException as e:
         raise HTTPException(status_code=500, detail=f"Errore durante richiesta post {e}")
-    
+
+
+previous_questions : list[str] = []
+
+@app.post("/question/llm")
+def create_question_llm():
+
+    url = "http://ollama:11434/api/chat"
+
+    themes = ["cultura", "calcio", "sport", "cucina", "moda", "abitudini", "emozioni", "passioni"]
+    theme = random.choice(themes)
+
+    question_prompt = {
+        "role": "system",
+        "content": (
+            "Crea una sola domanda breve (max 7 parole). "
+            "Naturale e colloquiale, stile chat. "
+            "Solo la domanda, niente emoji. "
+            "Evita riferimenti a personaggi famosi, politica o attualità. "
+            "Tema: {theme}. "
+            "Non ripetere domande già fatte."
+        )
+    }
+
+    messages = [
+        question_prompt,
+        {"role": "user", "content": f"Genera una domanda sul tema: {theme}"}
+    ]
+
+
+    global previous_questions
+
+    for question in previous_questions:
+        messages.append({
+            "role": "user",
+            "content": f"Domanda già fatta: {question}"
+        })
+
+    print(messages)
+
+    payload = {
+        "model": "gemma2:2b",
+        "messages": messages,
+        "stream": False
+    }
+
+    try:
+        response = requests.post(url, json=payload)
+        response.raise_for_status()
+        risposta_api = response.json()
+        
+        # print("Payload inviato a Ollama:\n", json.dumps(payload, indent=2))
+
+        question = risposta_api["message"]["content"]
+        previous_questions.append(question)
+
+        return {"question": question} 
+           
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Errore durante richiesta post {e}")
+
+# ...existing code...
+
+async def get_llm_judgment(session_id: int):
+    """Fa decidere all'LLM chi è HUMAN e chi è BOT basandosi sulle risposte della sessione"""
+    try:
+        # Recupera tutte le domande e risposte per questa sessione
+        conn = create_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT q.text as question, a.text as answer, a.author_type, a.author_id
+            FROM questions q
+            JOIN answers a ON q.id = a.question_id
+            WHERE q.session_id = ? AND a.session_id = ?
+            ORDER BY q.created_at, a.author_type
+        """, (session_id, session_id))
+        
+        results = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        if not results:
+            return {"error": f"Nessuna risposta trovata per la sessione {session_id}"}
+        
+        # Organizza le risposte per player
+        human_responses = []
+        bot_responses = []
+        
+        current_question = None
+        for row in results:
+            question, answer, author_type, author_id = row
+            
+            if author_type == "HUMAN":
+                human_responses.append(f"Q: {question}\nA: {answer}")
+            elif author_type == "BOT":
+                bot_responses.append(f"Q: {question}\nA: {answer}")
+        
+         # Prepara il prompt per l'LLM giudice (RANDOMIZZA l'ordine!)
+        # Questo è importante per non dare hint all'LLM che Player 1 = HUMAN
+        import random
+        players = [
+            ("Player A", human_responses, "HUMAN"),
+            ("Player B", bot_responses, "BOT")
+        ]
+        random.shuffle(players)  # Randomizza chi è A e chi è B
+        
+        player_a_name, player_a_responses, player_a_real_type = players[0]
+        player_b_name, player_b_responses, player_b_real_type = players[1]
+        
+        # Prepara il prompt per l'LLM giudice
+        judgment_prompt = {
+            "role": "system",
+            "content": (
+                "Sei un giudice in un Turing Test. "
+                "Analizza le risposte dei due player e decidi chi è UMANO e chi è IA/BOT. "
+                "Concentrati su: naturalezza, errori umani, stile di scrittura, coerenza. "
+                "Gli umani spesso fanno errori di battitura, sono meno precisi, più colloquiali. "
+                "Le IA sono spesso più precise, formali, evitano errori. "
+                "Rispondi SOLO con: 'Player A è UMANO' oppure 'Player B è UMANO'."
+            )
+        }
+        
+        conversation_data = {
+            "role": "user", 
+            "content": (
+                f"{player_a_name} (risposte):\n" + "\n\n".join(player_a_responses) + 
+                "\n\n--- SEPARATORE ---\n\n" +
+                f"{player_b_name}(risposte):\n" + "\n\n".join(player_b_responses) +
+                "\n\n Rispondi SOLO con 'Player A è UMANO' o 'Player B è UMANO'."
+            )
+        }
+
+        print(conversation_data)
+
+        messages = [judgment_prompt, conversation_data]
+        
+        # Chiama l'LLM per il giudizio
+        url = "http://ollama:11434/api/chat"
+        payload = {
+            "model": "gemma2:2b",
+            "messages": messages,
+            "stream": False
+        }
+        
+        response = requests.post(url, json=payload)
+        response.raise_for_status()
+        risposta_api = response.json()
+        
+        llm_judgment = risposta_api["message"]["content"].strip()
+
+        llm_choice = None
+
+        if "PLAYER A è UMANO" in llm_judgment.upper():
+            llm_choice = 'A'
+        elif "PLAYER B è UMANO" in llm_judgment.upper():
+            llm_choice = 'B'
+        
+        # All' inizio imposto variabile su falso, se non ha indovinato LLM rimane falso, altrimenti cambia valore in vero
+        correct_answer = False
+
+        if llm_choice == 'A' and player_a_real_type == "HUMAN":
+            correct_answer = True
+        elif llm_choice == 'B' and player_b_real_type == "HUMAN":
+            correct_answer = True
+        
+        return {
+            "judgment": llm_judgment,
+            "session_id": session_id,
+            "human_responses": len(human_responses),
+            "bot_responses": len(bot_responses),
+            "correct_guess": ("Giudice ha VINTO" if correct_answer else "Giudice ha PERSO")
+        }
+        
+    except Exception as e:
+        print(f"Errore nel giudizio LLM: {e}")
+        return {"error": str(e)}
+
+
+from sentence_transformers import SentenceTransformer, util
+import torch
+
+# Modello pre-addestrato leggero
+model = SentenceTransformer("nickprock/sentence-bert-base-italian-uncased")
+
+@app.post("/trova_simile")
+async def trova_simile(request: QuestionRequest):
+    #Connessione al database per prendere domande 
+    conn = create_db_connection()
+    cursor = conn.cursor()
+    input_frase = request.text #domada inserita in input
+    soglia_similarità = 0.89
+    try:
+        cursor.execute("""
+            SELECT id,text
+            FROM questions
+            """
+        )
+        #lista di coppie trovate (id,question)
+        frasi_trovate = cursor.fetchall() # [(1,"ciao"),(2,"prova")...]
+        print(input_frase,frasi_trovate)
+        if not frasi_trovate:
+            #se non trovo domanda simile allora ne creo una nuova 
+            risposta_nuova = await get_llm_response(input_frase)
+
+            return {
+            "frase_input": input_frase,
+            "frase_simile": None,
+            "risposta_trovata": risposta_nuova,
+            "similarità": 0.0
+            }
+        #lista di sole question trovate
+        frasi_db = [row[1] for row in frasi_trovate]
+
+        # Embedding della frase in ingresso
+        embedding_input = model.encode(input_frase, convert_to_tensor=True)
+
+        # Embeddings frasi da DB
+        embeddings_db = model.encode(frasi_db, convert_to_tensor=True)
+
+        # Calcolo similarità coseno sulle frasi input e database
+        cosine_scores = util.cos_sim(embedding_input, embeddings_db)
+
+        # Trovo indice della frase più simile
+        best_idx = cosine_scores.argmax().item() #indice frase piu siile
+        best_score = cosine_scores[0][best_idx].item() #score frase piu simile
+        best_sentence = frasi_db[best_idx] #frase piu simile
+        best_id = frasi_trovate[best_idx][0] # id frase piu simile
+        #cerco una risposta possibile della domanda piu simile
+
+        cursor.execute("""
+            SELECT id,text
+            FROM answers
+            WHERE question_id = ?
+            ORDER BY RAND()
+            LIMIT 1
+            """, (best_id,)
+        )
+        #coppia (id, risposta) casuale trovata
+        coppia_trovata = cursor.fetchone() # 
+        risposta_trovata = coppia_trovata[1] if coppia_trovata else None; #nel caso non trova nulla da None
+    except mariadb.Error as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+    if best_score > soglia_similarità :
+        return {
+            "frase_input": input_frase,
+            "frase_simile": best_sentence,
+            "risposta_trovata": risposta_trovata,
+            "similarità": best_score
+        }
+    else:
+            risposta_nuova = await get_llm_response(input_frase)
+
+            return {
+            "frase_input": input_frase,
+            "frase_simile": None,
+            "risposta_trovata": risposta_nuova,
+            "similarità": 0.0
+            }
+        

@@ -28,6 +28,7 @@ websockets==15.0.1
 zope.event==5.1
 zope.interface==7.2
 
+
 # Transformer embeddings
 sentence-transformers>=2.2.2,<5.2.0
 
