@@ -18,7 +18,7 @@ services:
         ports:
             - "3307:3306"
         volumes:
-            - ./mariadb_data:/var/lib/mysql:Z
+            - mariadb_data:/var/lib/mysql
             - ./mariadb_init/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
         # healthcheck:
         #   test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ppassword"]
@@ -55,3 +55,4 @@ volumes:
     ollama_models:
         external: true
         name: ollama 
+    mariadb_data:

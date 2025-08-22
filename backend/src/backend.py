@@ -504,7 +504,7 @@ def create_question_llm():
     print(messages)
 
     payload = {
-        "model": "gemma2:2b",
+        "model": "gemma2:2b-instruct-q2_K",
         "messages": messages,
         "stream": False
     }
@@ -725,6 +725,6 @@ async def trova_simile(request: QuestionRequest):
             "frase_input": input_frase,
             "frase_simile": None,
             "risposta_trovata": risposta_nuova,
-            "similarità": 0.0
+            "similarità": best_score
             }
         
