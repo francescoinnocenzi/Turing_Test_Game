@@ -163,12 +163,12 @@
                 </div>
             </a>
             
-            <a href="/single/mimic" class="mode-button mode-c-button">
+            <!-- <a href="/single/mimic" class="mode-button mode-c-button">
                 <div class="mode-title">🤖 Modalità C: Imita l'IA</div>
                 <div class="mode-description">
                     Rispondi alle domande cercando di imitare un'intelligenza artificiale per ingannare il giudice
                 </div>
-            </a>
+            </a> -->
         </div>
         
         <a href="/" class="back-link">← Torna alla Home</a>
@@ -178,7 +178,30 @@
         </div>
     </div>
     <script>
-        const modalitaB = document.querySelector('.mode-button mode-b-button');
+        const modalitaB = document.querySelector('.mode-b-button');
+
+        modalitaB.addEventListener('click', async () => {
+            try {
+                const response = await fetch("http://localhost:8003/create/session", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    credentials: "include" // Quando chiamo /create/session, il backend ti manda un cookie di sessione. Se non metto "include", quel cookie non verrà mai salvato
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+
+                    console.log(data.message_info, data.session_id);
+                } else {
+                    console.error("Errore:", response.status, response.statusText);
+                }
+            } catch (error) {
+                console.error("Errore nel recupero della sessione:", error);
+            }
+        });
+
 
     </script>
 </body>

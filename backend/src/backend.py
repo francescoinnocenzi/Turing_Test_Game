@@ -1,8 +1,14 @@
-from fastapi import FastAPI, Request, WebSocketDisconnect, WebSocket, HTTPException, Form
+from fastapi import FastAPI, Request, Depends, WebSocketDisconnect, WebSocket, HTTPException, Form, Response
 from typing import List
 import requests, json
 from pydantic import BaseModel
 import random
+from uuid import uuid4
+
+
+from fastapi_sessions.frontends.implementations import SessionCookie, CookieParameters
+from fastapi_sessions.backends.implementations import InMemoryBackend
+from fastapi_sessions.session_verifier import SessionVerifier
 
 
 from websocket import ConnectionManager
@@ -15,10 +21,51 @@ from utils.emoji import remove_emoji
 import mariadb
 from pydantic import BaseModel
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI()
+
+# Il middleware CORS serve a permettere al frontend (che gira su http://localhost:8001) 
+# di parlare con il backend (che gira su http://localhost:8003).
+app.add_middleware(
+    CORSMiddleware,  
+
+    # Lista di domini da cui accetto richieste
+    # In questo caso solo il frontend che gira su localhost:8001
+    allow_origins=["http://localhost:8001"],  
+
+    # Permette l'invio dei cookie e credenziali (es. Authorization header)
+    # Necessario se usi SessionCookie o fetch con credentials: "include"
+    allow_credentials=True,  
+
+    # Quali metodi HTTP permettere (GET, POST, PUT, DELETE...)
+    # Con "*" vuol dire tutti i metodi
+    allow_methods=["*"],  
+
+    # Quali header permettere nella richiesta
+    # Con "*" vuol dire tutti i possibili header
+    allow_headers=["*"],  
+)
 
 # Crea un'istanza del gestore connessioni
 manager = ConnectionManager()
+
+# 🔹 1. Definisci SessionData
+class SessionData(BaseModel):
+    session_id: int
+    room_name: str
+
+
+# 🔹 2. Configura backend e cookie
+backend = InMemoryBackend[int, SessionData]()
+cookie_params = CookieParameters()
+cookie = SessionCookie(
+    cookie_name="session",
+    identifier="general_verifier",
+    auto_error=False,
+    secret_key="your-secret-key-change-this",  # cambia con una chiave sicura!
+    cookie_params=cookie_params,
+)
 
 
 @app.post("/questions/create", response_model=QuestionResponse)
@@ -101,11 +148,35 @@ def create_answer(request: AnswerRequest):
 # Funzione per verificare se tutti hanno risposto e inviare notifica
 # ...existing code...
 
-async def check_all_answered(question_id: int, room_name: str):
+async def check_all_answered(question_id: int, room_name: str, session_id: int):
     """Verifica se tutti i player hanno risposto alla domanda"""
     try:
         conn = create_db_connection()
         cursor = conn.cursor()
+
+        # Conta domande per questa sessione
+        cursor.execute("""
+            SELECT COUNT(*) FROM questions 
+            WHERE session_id = ?
+        """, (session_id,))
+
+        question_count = cursor.fetchone()[0]
+        MAX_QUESTIONS = 5  # Configurabile
+
+        if question_count >= MAX_QUESTIONS:
+            # Fine partita - esegui giudizio
+            judgment_result = await get_llm_judgment(session_id)
+            # Invia risultato finale
+        
+            print(f"GIUDIZIO {judgment_result}")
+            
+            if "judgment" in judgment_result:
+                # Invia il giudizio a tutti i client
+                await manager.send_judgment_to_all(judgment_result["judgment"], room_name)
+                print(f"Giudizio inviato: {judgment_result['judgment']}")
+            else:
+                print(f"Errore nel giudizio: {judgment_result.get('error', 'Errore sconosciuto')}")
+        
         
         cursor.execute("""
             SELECT COUNT(*) as total_answers,
@@ -123,18 +194,6 @@ async def check_all_answered(question_id: int, room_name: str):
         if total_answers >= 2:  # Entrambi hanno risposto
             print("✅ Tutti hanno risposto! Inviando giudizio LLM...")
             
-            # Richiedi il giudizio dell'LLM
-            judgment_result = await get_llm_judgment(session_id=1)
-
-            print(f"GIUDIZIO {judgment_result}")
-            
-            if "judgment" in judgment_result:
-                # Invia il giudizio a tutti i client
-                await manager.send_judgment_to_all(judgment_result["judgment"], room_name)
-                print(f"Giudizio inviato: {judgment_result['judgment']}")
-            else:
-                print(f"Errore nel giudizio: {judgment_result.get('error', 'Errore sconosciuto')}")
-        
         cursor.close()
         conn.close()
         
@@ -193,7 +252,7 @@ async def websocket_endpoint(websocket: WebSocket, room_name: str, client_id: in
                         text=question,
                         room_name=room_name,
                         author_id="system-auto",
-                        session_id=1
+                        session_id=2
                     )
                     saved_question = create_question(question_request)
 
@@ -211,7 +270,7 @@ async def websocket_endpoint(websocket: WebSocket, room_name: str, client_id: in
                     # Salva la risposta del bot
                     bot_answer_request = AnswerRequest(
                         question_id=saved_question.id,
-                        session_id=1,
+                        session_id=2,
                         text=bot_response,
                         author_id="bot-auto",
                         author_type="BOT",
@@ -271,7 +330,7 @@ async def websocket_endpoint(websocket: WebSocket, room_name: str, client_id: in
                         # Salva la risposta del bot
                         bot_answer_request = AnswerRequest(
                             question_id=saved_question.id,
-                            session_id=1,
+                            session_id=2,
                             text=bot_response,
                             author_id="bot-auto",
                             author_type="BOT",
@@ -285,7 +344,7 @@ async def websocket_endpoint(websocket: WebSocket, room_name: str, client_id: in
                         print("Bot answer sent to judge")
 
                         # Usa la funzione centralizzata per verificare se tutti hanno risposto
-                        await check_all_answered(saved_question.id, room_name)
+                        await check_all_answered(saved_question.id, room_name, session_id=2)
 
                     except Exception as e:
                         print(f"Errore durante il processo: {e}")
@@ -327,7 +386,7 @@ async def websocket_endpoint(websocket: WebSocket, room_name: str, client_id: in
                         print(f"Creating answer with question_id: {question_id}")
                         answer_request = AnswerRequest(
                             question_id=question_id,
-                            session_id=1,
+                            session_id=2,
                             text=text,
                             author_id=str(client_id),
                             author_type= ("HUMAN" if player_number == 1 else "BOT"),
@@ -337,7 +396,7 @@ async def websocket_endpoint(websocket: WebSocket, room_name: str, client_id: in
                         print(f"Answer saved with ID: {saved_answer.id}")
                         
                         # Usa la funzione centralizzata per verificare se tutti hanno risposto
-                        await check_all_answered(question_id, room_name)
+                        await check_all_answered(question_id, room_name, session_id=2)
                         
                     except Exception as e:
                         print(f"Errore salvataggio risposta: {e}")
@@ -354,7 +413,7 @@ async def websocket_endpoint(websocket: WebSocket, room_name: str, client_id: in
                             text=data,
                             room_name=room_name,
                             author_id=str(client_id),
-                            session_id=1
+                            session_id=2
                         )
 
                         saved_question = create_question(question_request)
@@ -388,7 +447,7 @@ async def websocket_endpoint(websocket: WebSocket, room_name: str, client_id: in
                         if last_question:
                             answer_request = AnswerRequest(
                                 question_id=last_question[0],
-                                session_id=1,
+                                session_id=2,
                                 text=data,
                                 author_id=str(client_id),
                                 author_type=("HUMAN" if player_number == 1 else "BOT"),
@@ -642,89 +701,120 @@ async def get_llm_judgment(session_id: int):
         return {"error": str(e)}
 
 
-from sentence_transformers import SentenceTransformer, util
-import torch
+# from sentence_transformers import SentenceTransformer, util
+# import torch
 
-# Modello pre-addestrato leggero
-model = SentenceTransformer("nickprock/sentence-bert-base-italian-uncased")
+# # Modello pre-addestrato leggero
+# model = SentenceTransformer("nickprock/sentence-bert-base-italian-uncased")
 
-@app.post("/trova_simile")
-async def trova_simile(request: QuestionRequest):
-    #Connessione al database per prendere domande 
+# @app.post("/trova_simile")
+# async def trova_simile(request: QuestionRequest):
+#     #Connessione al database per prendere domande 
+#     conn = create_db_connection()
+#     cursor = conn.cursor()
+#     input_frase = request.text #domada inserita in input
+#     soglia_similarità = 0.8
+#     try:
+#         cursor.execute("""
+#             SELECT id,text
+#             FROM questions
+#             """
+#         )
+#         #lista di coppie trovate (id,question)
+#         frasi_trovate = cursor.fetchall() # [(1,"ciao"),(2,"prova")...]
+#         print(input_frase,frasi_trovate)
+#         if not frasi_trovate:
+#             #se non trovo domanda simile allora ne creo una nuova 
+#             risposta_nuova = await get_llm_response(input_frase)
+
+#             return {
+#             "frase_input": input_frase,
+#             "frase_simile": None,
+#             "risposta_trovata": risposta_nuova,
+#             "similarità": 0.0
+#             }
+#         #lista di sole question trovate
+#         frasi_db = [row[1] for row in frasi_trovate]
+
+#         # Embedding della frase in ingresso
+#         embedding_input = model.encode(input_frase, convert_to_tensor=True)
+
+#         # Embeddings frasi da DB
+#         embeddings_db = model.encode(frasi_db, convert_to_tensor=True)
+
+#         # Calcolo similarità coseno sulle frasi input e database
+#         cosine_scores = util.cos_sim(embedding_input, embeddings_db)
+
+#         # Trovo indice della frase più simile
+#         best_idx = cosine_scores.argmax().item() #indice frase piu siile
+#         best_score = cosine_scores[0][best_idx].item() #score frase piu simile
+#         best_sentence = frasi_db[best_idx] #frase piu simile
+#         best_id = frasi_trovate[best_idx][0] # id frase piu simile
+#         #cerco una risposta possibile della domanda piu simile
+
+#         cursor.execute("""
+#             SELECT id,text
+#             FROM answers
+#             WHERE question_id = ?
+#             ORDER BY RAND()
+#             LIMIT 1
+#             """, (best_id,)
+#         )
+#         #coppia (id, risposta) casuale trovata
+#         coppia_trovata = cursor.fetchone() # 
+#         risposta_trovata = coppia_trovata[1] if coppia_trovata else None; #nel caso non trova nulla da None
+#     except mariadb.Error as e:
+#         conn.rollback()
+#         raise HTTPException(status_code=500, detail=str(e))
+#     finally:
+#         cursor.close()
+#         conn.close()
+#     print(f"BEST SCORE {best_score}")
+#     if best_score > soglia_similarità :
+#         return {
+#             "frase_input": input_frase,
+#             "frase_simile": best_sentence,
+#             "risposta_trovata": risposta_trovata,
+#             "similarità": best_score
+#         }
+#     else:
+#             risposta_nuova = await get_llm_response(input_frase)
+
+#             return {
+#             "frase_input": input_frase,
+#             "frase_simile": None,
+#             "risposta_trovata": risposta_nuova,
+#             "similarità": 0.0
+#             }
+@app.post("/create/session")
+async def create_session(response: Response):
     conn = create_db_connection()
     cursor = conn.cursor()
-    input_frase = request.text #domada inserita in input
-    soglia_similarità = 0.8
+
     try:
-        cursor.execute("""
-            SELECT id,text
-            FROM questions
-            """
-        )
-        #lista di coppie trovate (id,question)
-        frasi_trovate = cursor.fetchall() # [(1,"ciao"),(2,"prova")...]
-        print(input_frase,frasi_trovate)
-        if not frasi_trovate:
-            #se non trovo domanda simile allora ne creo una nuova 
-            risposta_nuova = await get_llm_response(input_frase)
+        # 1. Salvo nel DB
+        cursor.execute("INSERT INTO sessions (room_name) VALUES ('room1');")
+        conn.commit()
+        db_session_id = cursor.lastrowid
 
-            return {
-            "frase_input": input_frase,
-            "frase_simile": None,
-            "risposta_trovata": risposta_nuova,
-            "similarità": 0.0
-            }
-        #lista di sole question trovate
-        frasi_db = [row[1] for row in frasi_trovate]
+        # 2. Creo una sessione con UUID
+        session_uuid = uuid4()
+        data = SessionData(session_id=db_session_id, room_name="room1")
+        await backend.create(session_uuid, data)
 
-        # Embedding della frase in ingresso
-        embedding_input = model.encode(input_frase, convert_to_tensor=True)
+        # 3. Attacco cookie (usa UUID)
+        cookie.attach_to_response(response, session_uuid)
 
-        # Embeddings frasi da DB
-        embeddings_db = model.encode(frasi_db, convert_to_tensor=True)
+        return {
+            "message_info": "Sessione creata con successo",
+            "db_session_id": db_session_id,
+            "session_uuid": str(session_uuid),
+        }
 
-        # Calcolo similarità coseno sulle frasi input e database
-        cosine_scores = util.cos_sim(embedding_input, embeddings_db)
-
-        # Trovo indice della frase più simile
-        best_idx = cosine_scores.argmax().item() #indice frase piu siile
-        best_score = cosine_scores[0][best_idx].item() #score frase piu simile
-        best_sentence = frasi_db[best_idx] #frase piu simile
-        best_id = frasi_trovate[best_idx][0] # id frase piu simile
-        #cerco una risposta possibile della domanda piu simile
-
-        cursor.execute("""
-            SELECT id,text
-            FROM answers
-            WHERE question_id = ?
-            ORDER BY RAND()
-            LIMIT 1
-            """, (best_id,)
-        )
-        #coppia (id, risposta) casuale trovata
-        coppia_trovata = cursor.fetchone() # 
-        risposta_trovata = coppia_trovata[1] if coppia_trovata else None; #nel caso non trova nulla da None
     except mariadb.Error as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
     finally:
         cursor.close()
         conn.close()
-    print(f"BEST SCORE {best_score}")
-    if best_score > soglia_similarità :
-        return {
-            "frase_input": input_frase,
-            "frase_simile": best_sentence,
-            "risposta_trovata": risposta_trovata,
-            "similarità": best_score
-        }
-    else:
-            risposta_nuova = await get_llm_response(input_frase)
-
-            return {
-            "frase_input": input_frase,
-            "frase_simile": None,
-            "risposta_trovata": risposta_nuova,
-            "similarità": best_score
-            }
-        
