@@ -303,140 +303,140 @@
 
     <!-- <script src="../static/chat.js"></script> -->
     <script>
-       let ws = null;
-let mode = null;
-let clientId = Math.floor(Math.random() * 100000);
-let currentQuestionId = null;
-let currentAnswer = null;
+    let ws = null;
+    let mode = null;
+    let clientId = Math.floor(Math.random() * 100000);
+    let currentQuestionId = null;
+    let currentAnswer = null;
 
-function setupWebSocket(selectedRoom, selectedMode) {
-    mode = selectedMode;
+    function setupWebSocket(selectedRoom, selectedMode) {
+        mode = selectedMode;
 
-    // Chiudi la WebSocket esistente se attiva
-    if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.close();
-    }
-
-    const url = `ws://localhost:8003/ws/${selectedRoom}/${clientId}?role=HUMAN&mode=${mode}`;
-    console.log("🔌 Connessione a:", url);
-
-    ws = new WebSocket(url);
-
-    ws.onopen = () => {
-        console.log(`✅ Connesso come HUMAN in modalità ${mode}, stanza: ${selectedRoom}`);
-        document.getElementById("room-id").textContent = `${selectedRoom.toUpperCase()} - ${mode.toUpperCase()}`;
-    };
-
-    ws.onerror = (e) => {
-        console.error("❌ Errore WebSocket:", e);
-    };
-
-    ws.onclose = (evt) => {
-        console.warn("⚠️ WS chiuso:", evt);
-    };
-
-    ws.onmessage = function(event) {
-        if (typeof ws_onmessage_override === "function") {
-            ws_onmessage_override(event);
-        } else {
-            const messages = document.getElementById('messages');
-            const message = document.createElement('li');
-            const content = document.createTextNode(event.data);
-            message.appendChild(content);
-            messages.appendChild(message);
+        // Chiudi la WebSocket esistente se attiva
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.close();
         }
-    };
-}
 
-// --- invio messaggi ---
-document.getElementById('messageForm').addEventListener('submit', sendMessage);
+        const url = `ws://localhost:8003/ws/${selectedRoom}/${clientId}?role=HUMAN&mode=${mode}`;
+        console.log("🔌 Connessione a:", url);
 
-function sendMessage(event) {
-    if (event) {
-        event.preventDefault();
-        event.stopPropagation();
+        ws = new WebSocket(url);
+
+        ws.onopen = () => {
+            console.log(`✅ Connesso come HUMAN in modalità ${mode}, stanza: ${selectedRoom}`);
+            document.getElementById("room-id").textContent = `${selectedRoom.toUpperCase()} - ${mode.toUpperCase()}`;
+        };
+
+        ws.onerror = (e) => {
+            console.error("❌ Errore WebSocket:", e);
+        };
+
+        ws.onclose = (evt) => {
+            console.warn("⚠️ WS chiuso:", evt);
+        };
+
+        ws.onmessage = function(event) {
+            if (typeof ws_onmessage_override === "function") {
+                ws_onmessage_override(event);
+            } else {
+                const messages = document.getElementById('messages');
+                const message = document.createElement('li');
+                const content = document.createTextNode(event.data);
+                message.appendChild(content);
+                messages.appendChild(message);
+            }
+        };
     }
 
-    const input = document.getElementById("messageText");
-    const text = input.value.trim();
+    // --- invio messaggi ---
+    document.getElementById('messageForm').addEventListener('submit', sendMessage);
 
-    if (!text) {
-        console.warn("Messaggio vuoto, non inviato");
-        return false;
-    }
-
-    if (ws && ws.readyState === WebSocket.OPEN) {
-        currentAnswer = text;
-        const message = { type: "answer", text: currentAnswer };
-        if (currentQuestionId) {
-            message.question_id = currentQuestionId;
+    function sendMessage(event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
         }
-        try {
-            ws.send(JSON.stringify(message));
-            input.value = '';
-        } catch (error) {
-            console.error("Errore nell'invio:", error);
+
+        const input = document.getElementById("messageText");
+        const text = input.value.trim();
+
+        if (!text) {
+            console.warn("Messaggio vuoto, non inviato");
             return false;
         }
-    } else {
+
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            currentAnswer = text;
+            const message = { type: "answer", text: currentAnswer };
+            if (currentQuestionId) {
+                message.question_id = currentQuestionId;
+            }
+            try {
+                ws.send(JSON.stringify(message));
+                input.value = '';
+            } catch (error) {
+                console.error("Errore nell'invio:", error);
+                return false;
+            }
+        } else {
+            return false;
+        }
+
         return false;
     }
 
-    return false;
-}
+    // --- override per ricevere domande ---
+    ws_onmessage_override = function(event) {
+        try {
+            let msg = JSON.parse(event.data);
+            if (msg.type === "question") {
+                const questionDiv = document.getElementById("current-question");
+                questionDiv.innerHTML = `<span class="emoji">❓</span>Domanda: ${msg.text}`;
+                questionDiv.className = "current-question new-question";
 
-// --- override per ricevere domande ---
-ws_onmessage_override = function(event) {
-    try {
-        let msg = JSON.parse(event.data);
-        if (msg.type === "question") {
-            const questionDiv = document.getElementById("current-question");
-            questionDiv.innerHTML = `<span class="emoji">❓</span>Domanda: ${msg.text}`;
-            questionDiv.className = "current-question new-question";
+                if (msg.id) {
+                    currentQuestionId = msg.id;
+                }
 
-            if (msg.id) {
-                currentQuestionId = msg.id;
+                setTimeout(() => {
+                    questionDiv.className = "current-question";
+                }, 2000);
+            } else if (msg.type === "system") {
+                // system message, ignora
+            } else {
+                const messages = document.getElementById('messages');
+                const message = document.createElement('li');
+                message.textContent = msg.text || event.data;
+                messages.appendChild(message);
+                messages.scrollTop = messages.scrollHeight;
             }
-
-            setTimeout(() => {
-                questionDiv.className = "current-question";
-            }, 2000);
-        } else if (msg.type === "system") {
-            // system message, ignora
-        } else {
+        } catch (e) {
             const messages = document.getElementById('messages');
             const message = document.createElement('li');
-            message.textContent = msg.text || event.data;
+            message.textContent = event.data;
             messages.appendChild(message);
             messages.scrollTop = messages.scrollHeight;
         }
-    } catch (e) {
-        const messages = document.getElementById('messages');
-        const message = document.createElement('li');
-        message.textContent = event.data;
-        messages.appendChild(message);
-        messages.scrollTop = messages.scrollHeight;
-    }
-};
+    };
 
-// --- collego i bottoni room ---
-const rooms = ['room1', 'room2', 'room3'];
+    // --- collego i bottoni room ---
+    const rooms = ['room1', 'room2', 'room3'];
 
-document.querySelector('#room1').addEventListener('click', () => {
-    console.log("Hai scelto:", rooms[0]);
-    setupWebSocket(rooms[0], mode || "multi"); // se non hai ancora scelto mode, default = multi
-});
+    document.querySelector('#room1').addEventListener('click', () => {
+        console.log("Hai scelto:", rooms[0]);
+        setupWebSocket(rooms[0], mode || "multi"); // se non hai ancora scelto mode, default = multi
+    });
 
-// puoi aggiungere anche pulsanti per scegliere la modalità:
-document.querySelector('#btn-single').addEventListener('click', () => {
-    mode = "single";
-    console.log("Modalità impostata:", mode);
-});
+    // puoi aggiungere anche pulsanti per scegliere la modalità:
+    document.querySelector('#btn-single').addEventListener('click', () => {
+        mode = "single";
+        console.log("Modalità impostata:", mode);
+    });
 
-document.querySelector('#btn-multi').addEventListener('click', () => {
-    mode = "multi";
-    console.log("Modalità impostata:", mode);
-});
+    document.querySelector('#btn-multi').addEventListener('click', () => {
+        mode = "multi";
+        console.log("Modalità impostata:", mode);
+    });
 
     </script>
 </body>
