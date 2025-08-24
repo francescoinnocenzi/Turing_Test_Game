@@ -131,4 +131,22 @@ class ConnectionManager:
                 print(f"  → Judgment sent to client {client_id} ({client_data['role']})")
             except Exception as e:
                 print(f"Error sending judgment to client {client_id}: {e}")
+    
+    async def send_message_to_all(self, message: str, message_type: str, room_name: str):
+        """Invia messaggio a tutti i client nella room"""
+        room = self.rooms.get(room_name, {})
+        message = json.dumps({
+            "type": f"{message_type}",
+            "message": message
+        })
+        
+        print(f"SENDING message to all clients in room {room_name}")
+        
+        for client_id, client_data in room.items():
+            try:
+                await client_data["ws"].send_text(message)
+                print(f"  → Message sent to client {client_id} ({client_data['role']})")
+            except Exception as e:
+                print(f"Error sending message to client {client_id}: {e}")
+
 

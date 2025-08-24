@@ -149,7 +149,7 @@
         </div>
         
         <div class="mode-buttons">
-            <a href="/single/judge" class="mode-button mode-a-button">
+            <a href="/judge" class="mode-button mode-a-button">
                 <div class="mode-title">👨‍⚖️ Modalità A: Fai da GIUDICE</div>
                 <div class="mode-description">
                     Fai domande e indovina quale risposta proviene da un umano e quale da un'intelligenza artificiale
@@ -178,9 +178,10 @@
         </div>
     </div>
     <script>
-        const modalitaB = document.querySelector('.mode-b-button');
+        const modalitaA = document.querySelector('.mode-a-button');
 
-        modalitaB.addEventListener('click', async () => {
+        modalitaA.addEventListener('click', async (event) => {
+            event.preventDefault();
             try {
                 const response = await fetch("http://localhost:8003/create/session", {
                     method: "POST",
@@ -193,7 +194,11 @@
                 if (response.ok) {
                     const data = await response.json();
 
-                    console.log(data.message_info, data.session_id);
+                    console.log("✅ Sessione creata:", data);
+                    console.log("🔄 Ora vado a /judge...");
+                    
+                    window.location.href = "/judge";
+
                 } else {
                     console.error("Errore:", response.status, response.statusText);
                 }
@@ -202,6 +207,33 @@
             }
         });
 
+
+        const modalitaB = document.querySelector('.mode-b-button');
+
+        modalitaB.addEventListener('click', async (event) => {
+            event.preventDefault();
+            try {
+                const response = await fetch("http://localhost:8003/create/session", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    credentials: "include" // Quando chiamo /create/session, il backend ti manda un cookie di sessione. Se non metto "include", quel cookie non verrà mai salvato
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log("✅ Sessione creata:", data);
+                    console.log("🔄 Ora vado a /player...");
+
+                    window.location.href = "/player";
+                } else {
+                    console.error("Errore:", response.status, response.statusText);
+                }
+            } catch (error) {
+                console.error("Errore nel recupero della sessione:", error);
+            }
+        });
 
     </script>
 </body>

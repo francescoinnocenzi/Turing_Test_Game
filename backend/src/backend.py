@@ -3,7 +3,7 @@ from typing import List
 import requests, json
 from pydantic import BaseModel
 import random
-from uuid import uuid4
+from uuid import uuid4, UUID
 
 
 from fastapi_sessions.frontends.implementations import SessionCookie, CookieParameters
@@ -16,6 +16,7 @@ from database.connection import create_db_connection
 from schemas.question import QuestionRequest, QuestionResponse
 from schemas.answer import AnswerRequest, AnswerResponse
 from schemas.api_models import RequestAPI, ResponseAPI
+from schemas.judgment import JudgmentRequest, JudgmentResponse
 from utils.emoji import remove_emoji
 
 import mariadb
@@ -53,11 +54,13 @@ manager = ConnectionManager()
 # 🔹 1. Definisci SessionData
 class SessionData(BaseModel):
     session_id: int
-    room_name: str
-
 
 # 🔹 2. Configura backend e cookie
-backend = InMemoryBackend[int, SessionData]()
+backend = InMemoryBackend[UUID, SessionData]()# è un dizionario che mappa: una chiave (UUID) ad un valore SessionData.
+# {
+#   UUID("123e4567..."): SessionData(session_id=1)
+# }
+
 cookie_params = CookieParameters()
 cookie = SessionCookie(
     cookie_name="session",
@@ -145,10 +148,71 @@ def create_answer(request: AnswerRequest):
         cursor.close()
         conn.close()
 
-# Funzione per verificare se tutti hanno risposto e inviare notifica
-# ...existing code...
+@app.post("/create/judgment", response_model=JudgmentResponse)
+def submit_judgment(request: JudgmentRequest):
+    conn = create_db_connection()
+    cursor = conn.cursor()
 
-async def check_all_answered(question_id: int, room_name: str, session_id: int):
+    try:
+        # Salva il giudizio
+        cursor.execute("""
+            INSERT INTO judgments (session_id, judge_id, chosen_player_human)
+            VALUES (?, ?, ?)
+        """, (request.session_id, request.judge_id, request.chosen_player_human, ))
+        conn.commit()
+
+        judgment_id = cursor.lastrowid
+
+        # Recupera il record appena salvato
+        cursor.execute("""
+            SELECT id, session_id, judge_id, chosen_player_human, created_at
+            FROM judgments
+            WHERE id = ?
+        """, (judgment_id,))
+        row = cursor.fetchone()
+
+        return JudgmentResponse(
+            id=row[0],
+            session_id=row[1],
+            judge_id=row[2],
+            chosen_player_human=row[3],
+            created_at=row[4]
+        )
+
+    except mariadb.Error as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+async def check_and_finalize_game(session_id: int, room_name: str, question_count: int, max_questions: int, role: str, mode: str):
+    """
+    Controlla se il numero massimo di domande è stato raggiunto
+    e in caso affermativo esegue il giudizio finale e chiude la partita.
+    """
+    if question_count >= max_questions:
+
+        if mode == "single" and role == "HUMAN":
+            # Fine partita - esegui giudizio
+            judgment_result = await get_llm_judgment(session_id)
+            # Invia risultato finale
+        
+            print(f"GIUDIZIO {judgment_result}")
+            
+            if "judgment" in judgment_result:
+                # Invia il giudizio a tutti i client
+                await manager.send_judgment_to_all(judgment_result["human_result"], room_name)
+                print(f"Giudizio inviato: {judgment_result['human_result']}")
+            else:
+                print(f"Errore nel giudizio: {judgment_result.get('error', 'Errore sconosciuto')}")
+        
+        if mode == "single" and role == "JUDGE":
+            await manager.send_message_to_all("Scegli chi è UMANO", "time_to_judge", room_name)
+
+
+    
+async def check_all_answered(question_id: int, room_name: str, session_id: int, role: str, mode: str):
     """Verifica se tutti i player hanno risposto alla domanda"""
     try:
         conn = create_db_connection()
@@ -161,22 +225,9 @@ async def check_all_answered(question_id: int, room_name: str, session_id: int):
         """, (session_id,))
 
         question_count = cursor.fetchone()[0]
-        MAX_QUESTIONS = 5  # Configurabile
+        MAX_QUESTIONS = 2  # Configurabile
 
-        if question_count >= MAX_QUESTIONS:
-            # Fine partita - esegui giudizio
-            judgment_result = await get_llm_judgment(session_id)
-            # Invia risultato finale
-        
-            print(f"GIUDIZIO {judgment_result}")
-            
-            if "judgment" in judgment_result:
-                # Invia il giudizio a tutti i client
-                await manager.send_judgment_to_all(judgment_result["judgment"], room_name)
-                print(f"Giudizio inviato: {judgment_result['judgment']}")
-            else:
-                print(f"Errore nel giudizio: {judgment_result.get('error', 'Errore sconosciuto')}")
-        
+        await check_and_finalize_game(session_id, room_name, question_count, MAX_QUESTIONS, role, mode)
         
         cursor.execute("""
             SELECT COUNT(*) as total_answers,
@@ -192,7 +243,14 @@ async def check_all_answered(question_id: int, room_name: str, session_id: int):
         print(f"Risposte ricevute: {total_answers}/2 (Human: {human_answers}, Bot: {bot_answers})")
         
         if total_answers >= 2:  # Entrambi hanno risposto
-            print("✅ Tutti hanno risposto! Inviando giudizio LLM...")
+            print("✅ Tutti hanno risposto!")
+            await manager.send_to_judge({ 
+                "type": "all_answered", 
+                "message": "✅ Tutti hanno risposto! Puoi inviare la prossima domanda." 
+                }, room_name)
+            
+            if role == "HUMAN" and mode == "single" and question_count < MAX_QUESTIONS:
+                await auto_generate_next_question(room_name, session_id)
             
         cursor.close()
         conn.close()
@@ -225,246 +283,239 @@ async def get_llm_question():
 # Endpoint WebSocket per gestire la comunicazione in tempo reale
 @app.websocket("/ws/{room_name}/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, room_name: str, client_id: int):
-
+    #Prendo parametri dalla query string
     role = websocket.query_params.get("role", "SPECTATOR").upper()
-    mode = websocket.query_params.get("mode", "multi").lower()
+    mode = websocket.query_params.get("mode", "single").lower()
 
-    print(role, mode)
+    # DEBUG: Stampa TUTTI i cookie disponibili
+    # websocket.cookies è un dizionario contenente tutti i cookie che il client ha inviato con la connessione WebSocket.
+    print(f"🍪 Tutti i cookie disponibili: {websocket.cookies}")
 
-    # Accetta la connessione del nuovo client
-    await manager.connect(room_name, websocket, client_id, role)
-
-    if role == "HUMAN" and mode == "single":
-        room_clients = manager.rooms.get(room_name, {})
-        roles = [ws["role"] for ws in room_clients.values()]
-
-        if "JUDGE" not in roles:                        
-            question = await get_llm_question()
-
-            print(f"DOMANDA LLM: {question}")
-
-            if question:
-                # Invia la domanda subito all'HUMAN
-                await manager.send_question_to_players(question, room_name)
-            
-                try:
-                    question_request = QuestionRequest(
-                        text=question,
-                        room_name=room_name,
-                        author_id="system-auto",
-                        session_id=2
-                    )
-                    saved_question = create_question(question_request)
-
-                    await websocket.send_text(json.dumps({
-                        "type": "question_saved",
-                        "question_id": saved_question.id
-                    }))
-                    print("Confirmation sent to judge")
-
-                    # Ottieni risposta automatica dal bot LLM
-                    print("🤖 Richiedendo risposta automatica al bot...")
-                    bot_response = await get_llm_response(question)
-                    print(f"🤖 Risposta bot: {bot_response}")
-
-                    # Salva la risposta del bot
-                    bot_answer_request = AnswerRequest(
-                        question_id=saved_question.id,
-                        session_id=2,
-                        text=bot_response,
-                        author_id="bot-auto",
-                        author_type="BOT",
-                        room_name=room_name
-                    )
-                    saved_bot_answer = create_answer(bot_answer_request)
-                    print(f"Bot answer saved with ID: {saved_bot_answer.id}")
-                
-                except Exception as e:
-                    print(f"Errore durante il processo: {e}")
+    session_id = None
     
     try:
-        # Ciclo continuo per ricevere e gestire i messaggi WebSocket
-        while True:
-            # Riceve un messaggio di testo dal client
-            data = await websocket.receive_text()
+        session_uuid = cookie(websocket) # legge il cookie di sessione impostato e restituisce il UUID della sessione.
+        print(f"✅ Session UUID verificato: {session_uuid}")
+        
+        # Cerca nel backend in memoria i dati salvati per quella sessione.
+        stored_data: SessionData = await backend.read(session_uuid) 
+        
+        if stored_data:
+            session_id = stored_data.session_id
+        else:
+            print("Dati sessione non trovati")
+            
+    except Exception as e:
+        print(f"Errore verifica sessione: {e}")
+       
 
+    print(f"SESSION_ID FINALE: {session_id}")
+
+    await manager.connect(room_name, websocket, client_id, role)
+    print(f"✅ Nuovo client {client_id} connesso come {role} in modalità {mode}")
+
+    # Se è PLAYER in singleplayer → genera subito una domanda
+    if role == "HUMAN" and mode == "single": #Single player modalita role = HUMAN
+        question = await auto_generate_next_question(room_name, session_id) #Genero domanda dall'LLM
+        # if question:
+        #     await process_auto_question(room_name, websocket, question, session_id) #Processo domanda automatica
+
+    try:
+        while True:
+            data = await websocket.receive_text()
             ws = manager.rooms[room_name][client_id]
             role = ws["role"]
-            
+
             try:
                 message = json.loads(data)
-                message_type = message.get("type") 
-                text = message.get("text")
-                print(f"Message type: {message_type}, Role: {role}, Text: {text}")
+                msg_type = message.get("type")
 
-                # Se è il giudice che manda un messaggio, è una domanda per i player
-                if message_type == "question":
-                    print("JUDGE condition matched - processing question")
+                if msg_type == "question": #Gestione della domanda in arrivo
+                    await handle_question(room_name, client_id, role, message, websocket, mode, session_id=session_id)
 
-                    await manager.send_question_to_players(text, room_name)
-                    print("Question sent to players")
-
-                    try: 
-                        print("Creating question request...")
-                        question_request = QuestionRequest(
-                            text=text,
-                            room_name=room_name,
-                            author_id=str(client_id),
-                            session_id= 1
-                        )
-                        print("Calling create_question...")
-                        saved_question = create_question(question_request)
-                        print(f"Question saved with ID: {saved_question.id}")
-
-                        await websocket.send_text(json.dumps({
-                            "type": "question_saved",
-                            "question_id": saved_question.id
-                        }))
-                        print("Confirmation sent to judge")
-                        
-                        # Ottieni risposta automatica dal bot LLM
-                        print("🤖 Richiedendo risposta automatica al bot...")
-                        bot_response = await get_llm_response(text)
-                        print(f"🤖 Risposta bot: {bot_response}")
-
-                        # Salva la risposta del bot
-                        bot_answer_request = AnswerRequest(
-                            question_id=saved_question.id,
-                            session_id=2,
-                            text=bot_response,
-                            author_id="bot-auto",
-                            author_type="BOT",
-                            room_name=room_name
-                        )
-                        saved_bot_answer = create_answer(bot_answer_request)
-                        print(f"Bot answer saved with ID: {saved_bot_answer.id}")
-
-                        # Invia la risposta del bot al giudice
-                        await manager.send_answer_to_judge(bot_response, room_name, 2)  # 2 = BOT
-                        print("Bot answer sent to judge")
-
-                        # Usa la funzione centralizzata per verificare se tutti hanno risposto
-                        await check_all_answered(saved_question.id, room_name, session_id=2)
-
-                    except Exception as e:
-                        print(f"Errore durante il processo: {e}")
+                elif msg_type == "answer": #Gestione della riposta in arrivo
+                    await handle_answer(room_name, client_id, role, message, websocket, mode, session_id=session_id)
                 
-                elif message_type=="answer":
-                    print("PLAYER ANSWER: Processing player response")
-                    # Se è un player che risponde, manda la risposta al giudice
-                    question_id = message.get("question_id")
-                    print(f"Question ID from message: {question_id}")
-                    player_number = 1 if role == "HUMAN" else 2  # HUMAN = Player 1, BOT = Player 2
-                    await manager.send_answer_to_judge(text, room_name, player_number)
-                    print("Answer sent to judge")
+                elif msg_type == "judge_choice":
+                    chosen_player_human = message.get("chosen_player_human")
 
-                    try:
-                        # Se non c'è question_id nel messaggio, ottienilo dal database
-                        if not question_id:
-                            print("🔍 No question_id provided, fetching from database...")
-                            conn = create_db_connection()
-                            cursor = conn.cursor()
-                            
-                            cursor.execute("""
-                                SELECT id FROM questions 
-                                WHERE room_name = ? 
-                                ORDER BY created_at DESC 
-                                LIMIT 1
-                            """, (room_name,))
-                            
-                            last_question = cursor.fetchone()
-                            cursor.close()
-                            conn.close()
-                            
-                            if last_question:
-                                question_id = last_question[0]
-                                print(f"Found question_id from database: {question_id}")
-                            else:
-                                print("No question found for this room")
-                                continue  # Salta il salvataggio se non c'è domanda
-                        
-                        print(f"Creating answer with question_id: {question_id}")
-                        answer_request = AnswerRequest(
-                            question_id=question_id,
-                            session_id=2,
-                            text=text,
-                            author_id=str(client_id),
-                            author_type= ("HUMAN" if player_number == 1 else "BOT"),
-                            room_name=room_name 
-                        )
-                        saved_answer = create_answer(answer_request)
-                        print(f"Answer saved with ID: {saved_answer.id}")
-                        
-                        # Usa la funzione centralizzata per verificare se tutti hanno risposto
-                        await check_all_answered(question_id, room_name, session_id=2)
-                        
-                    except Exception as e:
-                        print(f"Errore salvataggio risposta: {e}")
-            
-            except json.JSONDecodeError:
-                # Se non è JSON, trattalo come testo semplice (backward compatibility)
-                print(f"Ricevuto testo semplice: {data} da {role}")
-                if role == "JUDGE":
-                    print("JUDGE: Invio domanda ai player")
-                    await manager.send_question_to_players(data, room_name)
+                    judgment_req = JudgmentRequest(
+                        session_id=session_id,
+                        judge_id=1234,
+                        chosen_player_human=chosen_player_human
+                    )
+
+                    result_judgment = submit_judgment(judgment_req)
+                    judge_choice = result_judgment.chosen_player_human
                     
-                    try:
-                        question_request = QuestionRequest(
-                            text=data,
-                            room_name=room_name,
-                            author_id=str(client_id),
-                            session_id=2
-                        )
+                    player_a_real_type = "HUMAN"
+                    player_b_real_type = "BOT"
 
-                        saved_question = create_question(question_request)
-                        print(f"Domanda salvata con ID: {saved_question.id}")
-                    except Exception as e:
-                        print(f"Errore salvataggio domanda: {e}")
+                    correct_answer = False
+
+                    if judge_choice == 'A' and player_a_real_type == "HUMAN":
+                        correct_answer = True
+                    elif judge_choice == 'B' and player_b_real_type == "HUMAN":
+                        correct_answer = True 
+
+                    print(f"SCELTA FRONTEND: {judge_choice}")
+
+                    correct_guess = "GIUDICE ha VINTO" if correct_answer else "GIUDICE ha PERSO"
+
+                    await manager.send_judgment_to_all(correct_guess, room_name)
+                    
+
                 else:
-                    print("PLAYER: Invio risposta al giudice")
-                    player_number = 1 if role == "HUMAN" else 2
-                    await manager.send_answer_to_judge(data, room_name, player_number)
-                    
-                    # Salva la risposta nel database
-                    try:
-                        # Ottieni l'ultima domanda per questa room
-                        conn = create_db_connection()
-                        cursor = conn.cursor()
-                        
-                        cursor.execute("""
-                            SELECT id FROM questions 
-                            WHERE room_name = ? 
-                            ORDER BY created_at DESC 
-                            LIMIT 1
-                        """, (room_name,))
-                        
-                        last_question = cursor.fetchone()
-                        print(last_question)
-                        cursor.close()
+                    print(f"⚠️ Messaggio sconosciuto: {msg_type}")
 
-                        conn.close()
-                        
-                        if last_question:
-                            answer_request = AnswerRequest(
-                                question_id=last_question[0],
-                                session_id=2,
-                                text=data,
-                                author_id=str(client_id),
-                                author_type=("HUMAN" if player_number == 1 else "BOT"),
-                                room_name=room_name
-                            )
-                            create_answer(answer_request)
-                            print(f"Risposta salvata per question_id: {last_question[0]}")
-                        else:
-                            print("Nessuna domanda trovata per questa room")
-                            
-                    except Exception as e:
-                        print(f"Errore salvataggio risposta: {e}")
+            except json.JSONDecodeError:
+                await handle_raw_text(room_name, client_id, role, data, mode, session_id=session_id)
+
     except WebSocketDisconnect:
-        # Gestisce la disconnessione del client
         manager.disconnect(room_name, client_id)
-        # Notifica a tutti i client che il client si è disconnesso
-        await manager.broadcast(f"Client #{client_id} left the {room_name}", room_name)
+        await manager.broadcast(f"Client #{client_id} left {room_name}", room_name)
+#Gestione della domanda in arrivo (singleplayer)
+async def handle_question(room_name, client_id, role, message, websocket, mode, session_id):
+    text = message.get("text")
+    print(f"❓ Domanda dal giudice {client_id}: {text}")
+
+    # Invia ai bot
+    await manager.send_question_to_players(text, room_name)
+
+    # Salva domanda
+    q_req = QuestionRequest(
+        text=text,
+        room_name=room_name,
+        author_id=str(client_id),
+        session_id=session_id
+    )
+    saved_q = create_question(q_req)
+
+    await websocket.send_text(json.dumps({
+        "type": "question_saved",
+        "question_id": saved_q.id
+    }))
+
+    # BOT 1 (LLM)
+    bot1_resp = await get_llm_response(text)
+    #Salva risposta bot 
+    create_answer(AnswerRequest(
+        question_id=saved_q.id,
+        session_id=session_id,
+        text=bot1_resp,
+        author_id="bot-llm",
+        author_type="BOT",
+        room_name=room_name
+    ))
+    await manager.send_answer_to_judge(bot1_resp, room_name, 2)
+    print(f"🤖 BOT-LLM answer sent: {bot1_resp}")  # <-- log
+    
+    # BOT 2 (retrieval o fallback LLM)
+    bot2_data = await trova_simile(q_req)
+    bot2_resp = bot2_data["risposta_trovata"]
+    
+    #Salva risposta bot retrival
+    create_answer(AnswerRequest(
+        question_id=saved_q.id,
+        session_id=session_id,
+        text=bot2_resp,
+        author_id="bot-retrieval",
+        author_type="BOT",
+        room_name=room_name
+    ))
+    await manager.send_answer_to_judge(bot2_resp, room_name, 1) #metto 1 perche risponde al posto di HUMAN
+    print(f"🤖 BOT-Retrieval answer sent: {bot2_resp}")  # <-- log
+
+    await check_all_answered(saved_q.id, room_name, session_id=session_id, role="JUDGE", mode=mode)
+
+#Gestione della risposta inviata singleplayer
+async def handle_answer(room_name, client_id, role, message, websocket, mode, session_id):
+    text = message.get("text")
+    question_id = message.get("question_id")
+
+    player_number = 1 if role == "HUMAN" else 2
+    print(f"💬 Risposta da {role} (client {client_id}): {text}")
+
+    await manager.send_answer_to_judge(text, room_name, player_number)
+
+    if not question_id:
+        conn = create_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT id FROM questions 
+            WHERE room_name = ? 
+            ORDER BY created_at DESC 
+            LIMIT 1
+        """, (room_name,))
+        last_q = cur.fetchone()
+        cur.close(); conn.close()
+        if last_q:
+            question_id = last_q[0]
+
+    if question_id:
+        create_answer(AnswerRequest(
+            question_id=question_id,
+            session_id=session_id,
+            text=text,
+            author_id=str(client_id),
+            author_type=role,
+            room_name=room_name
+        ))
+    '''
+    # Se HUMAN ha risposto in singleplayer → genera risposta automatica del bot
+    if role == "HUMAN" and mode == "single": 
+        bot_resp = await get_llm_response(text)
+        create_answer(AnswerRequest(
+            question_id=question_id,
+            session_id=1,
+            text=bot_resp,
+            author_id="bot-auto",
+            author_type="BOT",
+            room_name=room_name
+        ))
+        await manager.send_answer_to_judge(bot_resp, room_name, 2) #bot'''
+    
+    # Usa la funzione centralizzata per verificare se tutti hanno risposto
+    await check_all_answered(question_id, room_name, session_id=session_id, role=role, mode=mode)
+    
+#Gestione caso domanda automatica in singleplayer
+async def process_auto_question(room_name, websocket, question, session_id):
+    #Ivia domanda ai player (Uno è il giocatore l'altro è il bot)
+    await manager.send_question_to_players(question, room_name)
+
+    q_req = QuestionRequest(
+        text=question,
+        room_name=room_name,
+        author_id="system-auto",
+        session_id=session_id
+    )
+    saved_q = create_question(q_req)
+
+    await websocket.send_text(json.dumps({
+        "type": "question_saved",
+        "question_id": saved_q.id
+    }))
+
+    #Risposta del bot alla domanda del ULLM
+    bot_resp = await get_llm_response(question)
+    create_answer(AnswerRequest(
+        question_id=saved_q.id,
+        session_id=session_id,
+        text=bot_resp,
+        author_id="bot-auto",
+        author_type="BOT",
+        room_name=room_name
+    ))
+    await manager.send_answer_to_judge(bot_resp, room_name, 2)
+    print(f"🤖 BOT-AUTO answer sent: {bot_resp}")
+    
+
+async def handle_raw_text(room_name, client_id, role, text, mode, session_id):
+    print(f"📥 Raw text da {role}: {text}")
+    if role == "JUDGE":
+        await handle_question(room_name, client_id, role, {"text": text}, None, mode, session_id=session_id)
+    else:
+        await handle_answer(room_name, client_id, role, {"text": text}, None, mode, session_id=session_id)
 
 chat_history: list[dict]= []
 
@@ -498,7 +549,7 @@ def chat_with_memory(request: RequestAPI):
     messages: list = [system_prompt] + chat_history  # prepend il system
 
     payload = {
-        "model": "gemma2:2b", #Versione ottimizzata di gemma2:2b
+        "model": "gemma2:2b-instruct-q2_K", #Versione ottimizzata di gemma2:2b
         "messages": messages,
         "stream": False
     }
@@ -611,7 +662,6 @@ async def get_llm_judgment(session_id: int):
         human_responses = []
         bot_responses = []
         
-        current_question = None
         for row in results:
             question, answer, author_type, author_id = row
             
@@ -620,17 +670,20 @@ async def get_llm_judgment(session_id: int):
             elif author_type == "BOT":
                 bot_responses.append(f"Q: {question}\nA: {answer}")
         
-         # Prepara il prompt per l'LLM giudice (RANDOMIZZA l'ordine!)
-        # Questo è importante per non dare hint all'LLM che Player 1 = HUMAN
+        # Randomizza SOLO i nomi, non i dati
         import random
-        players = [
-            ("Player A", human_responses, "HUMAN"),
-            ("Player B", bot_responses, "BOT")
+        player_a_name = "Player A"
+        player_b_name = "Player B"
+
+        players_data = [
+            (human_responses, "HUMAN"),
+            (bot_responses, "BOT")  
         ]
-        random.shuffle(players)  # Randomizza chi è A e chi è B
+        random.shuffle(players_data)
         
-        player_a_name, player_a_responses, player_a_real_type = players[0]
-        player_b_name, player_b_responses, player_b_real_type = players[1]
+        # Ora assegna in modo chiaro
+        player_a_responses, player_a_real_type = players_data[0]
+        player_b_responses, player_b_real_type = players_data[1]
         
         # Prepara il prompt per l'LLM giudice
         judgment_prompt = {
@@ -662,7 +715,7 @@ async def get_llm_judgment(session_id: int):
         # Chiama l'LLM per il giudizio
         url = "http://ollama:11434/api/chat"
         payload = {
-            "model": "gemma2:2b",
+            "model": "gemma2:2b-instruct-q2_K",
             "messages": messages,
             "stream": False
         }
@@ -675,10 +728,12 @@ async def get_llm_judgment(session_id: int):
 
         llm_choice = None
 
-        if "PLAYER A è UMANO" in llm_judgment.upper():
+        if "Player A è UMANO" in llm_judgment:
             llm_choice = 'A'
-        elif "PLAYER B è UMANO" in llm_judgment.upper():
+        elif "Player B è UMANO" in llm_judgment:
             llm_choice = 'B'
+
+        print(player_b_real_type, player_a_real_type)
         
         # All' inizio imposto variabile su falso, se non ha indovinato LLM rimane falso, altrimenti cambia valore in vero
         correct_answer = False
@@ -689,103 +744,119 @@ async def get_llm_judgment(session_id: int):
             correct_answer = True
         
         return {
+            "correct_answer": correct_answer,
+            "llm_choice": llm_choice,
             "judgment": llm_judgment,
             "session_id": session_id,
             "human_responses": len(human_responses),
             "bot_responses": len(bot_responses),
-            "correct_guess": ("Giudice ha VINTO" if correct_answer else "Giudice ha PERSO")
+            "correct_guess": ("GIUDICE ha VINTO" if correct_answer else "GIUDICE ha PERSO"),
+            "human_result": ("HUMAN ha VINTO" if not correct_answer else "HUMAN ha PERSO")
         }
         
     except Exception as e:
         print(f"Errore nel giudizio LLM: {e}")
         return {"error": str(e)}
 
+# def check_judge_choice(session_id: int, judge_choice: str):
 
-# from sentence_transformers import SentenceTransformer, util
-# import torch
 
-# # Modello pre-addestrato leggero
-# model = SentenceTransformer("nickprock/sentence-bert-base-italian-uncased")
 
-# @app.post("/trova_simile")
-# async def trova_simile(request: QuestionRequest):
-#     #Connessione al database per prendere domande 
-#     conn = create_db_connection()
-#     cursor = conn.cursor()
-#     input_frase = request.text #domada inserita in input
-#     soglia_similarità = 0.8
-#     try:
-#         cursor.execute("""
-#             SELECT id,text
-#             FROM questions
-#             """
-#         )
-#         #lista di coppie trovate (id,question)
-#         frasi_trovate = cursor.fetchall() # [(1,"ciao"),(2,"prova")...]
-#         print(input_frase,frasi_trovate)
-#         if not frasi_trovate:
-#             #se non trovo domanda simile allora ne creo una nuova 
-#             risposta_nuova = await get_llm_response(input_frase)
+from sentence_transformers import SentenceTransformer, util
+import torch
 
-#             return {
-#             "frase_input": input_frase,
-#             "frase_simile": None,
-#             "risposta_trovata": risposta_nuova,
-#             "similarità": 0.0
-#             }
-#         #lista di sole question trovate
-#         frasi_db = [row[1] for row in frasi_trovate]
+model = None
 
-#         # Embedding della frase in ingresso
-#         embedding_input = model.encode(input_frase, convert_to_tensor=True)
+def get_model():
+    global model
+    if model is None:
+        model = SentenceTransformer("nickprock/sentence-bert-base-italian-uncased")
+    return model
 
-#         # Embeddings frasi da DB
-#         embeddings_db = model.encode(frasi_db, convert_to_tensor=True)
+@app.post("/trova_simile")
+async def trova_simile(request: QuestionRequest):
+    # In questo modo il backend parte subito, e il modello viene caricato solo alla prima chiamata API.
+    model = get_model()
 
-#         # Calcolo similarità coseno sulle frasi input e database
-#         cosine_scores = util.cos_sim(embedding_input, embeddings_db)
+    #Connessione al database per prendere domande 
+    conn = create_db_connection()
+    cursor = conn.cursor()
 
-#         # Trovo indice della frase più simile
-#         best_idx = cosine_scores.argmax().item() #indice frase piu siile
-#         best_score = cosine_scores[0][best_idx].item() #score frase piu simile
-#         best_sentence = frasi_db[best_idx] #frase piu simile
-#         best_id = frasi_trovate[best_idx][0] # id frase piu simile
-#         #cerco una risposta possibile della domanda piu simile
+    input_frase = request.text #domada inserita in input
+    soglia_similarità = 0.8
+    try:
+        cursor.execute("""
+            SELECT id,text
+            FROM questions
+            """
+        )
+        #lista di coppie trovate (id,question)
+        frasi_trovate = cursor.fetchall() # [(1,"ciao"),(2,"prova")...]
+        print(input_frase,frasi_trovate)
+        if not frasi_trovate:
+            #se non trovo domanda simile allora ne creo una nuova 
+            risposta_nuova = await get_llm_response(input_frase)
 
-#         cursor.execute("""
-#             SELECT id,text
-#             FROM answers
-#             WHERE question_id = ?
-#             ORDER BY RAND()
-#             LIMIT 1
-#             """, (best_id,)
-#         )
-#         #coppia (id, risposta) casuale trovata
-#         coppia_trovata = cursor.fetchone() # 
-#         risposta_trovata = coppia_trovata[1] if coppia_trovata else None; #nel caso non trova nulla da None
-#     except mariadb.Error as e:
-#         conn.rollback()
-#         raise HTTPException(status_code=500, detail=str(e))
-#     finally:
-#         cursor.close()
-#         conn.close()
-#     print(f"BEST SCORE {best_score}")
-#     if best_score > soglia_similarità :
-#         return {
-#             "frase_input": input_frase,
-#             "frase_simile": best_sentence,
-#             "risposta_trovata": risposta_trovata,
-#             "similarità": best_score
-#         }
-#     else:
-#             risposta_nuova = await get_llm_response(input_frase)
+            return {
+                "frase_input": input_frase,
+                "frase_simile": None,
+                "risposta_trovata": risposta_nuova,
+                "similarità": 0.0
+            }
+        #lista di sole question trovate
+        frasi_db = [row[1] for row in frasi_trovate]
 
-#             return {
-#             "frase_input": input_frase,
-#             "frase_simile": None,
-#             "risposta_trovata": risposta_nuova,
-#             "similarità": 0.0
-#             }
+        # Embedding della frase in ingresso
+        embedding_input = model.encode(input_frase, convert_to_tensor=True)
+        # Embeddings frasi da DB
+        embeddings_db = model.encode(frasi_db, convert_to_tensor=True)
+
+        # Calcolo similarità coseno sulle frasi input e database
+        cosine_scores = util.cos_sim(embedding_input, embeddings_db)
+
+        # Trovo indice della frase più simile
+        best_idx = cosine_scores.argmax().item() #indice frase piu siile
+        best_score = cosine_scores[0][best_idx].item() #score frase piu simile
+        best_sentence = frasi_db[best_idx] #frase piu simile
+        best_id = frasi_trovate[best_idx][0] # id frase piu simile
+        #cerco una risposta possibile della domanda piu simile
+
+        cursor.execute("""
+            SELECT id,text
+            FROM answers
+            WHERE question_id = ?
+            ORDER BY RAND()
+            LIMIT 1
+            """, (best_id,)
+        )
+        #coppia (id, risposta) casuale trovata
+        coppia_trovata = cursor.fetchone() # 
+        risposta_trovata = coppia_trovata[1] if coppia_trovata else None; #nel caso non trova nulla da None
+    except mariadb.Error as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+    print(f"BEST SCORE {best_score}")
+
+    if best_score > soglia_similarità :
+        return {
+            "frase_input": input_frase,
+            "frase_simile": best_sentence,
+            "risposta_trovata": risposta_trovata,
+            "similarità": best_score
+        }
+    else:
+        risposta_nuova = await get_llm_response(input_frase)
+
+        return {
+            "frase_input": input_frase,
+            "frase_simile": None,
+            "risposta_trovata": risposta_nuova,
+            "similarità": 0.0
+        }
+    
 @app.post("/create/session")
 async def create_session(response: Response):
     conn = create_db_connection()
@@ -799,14 +870,14 @@ async def create_session(response: Response):
 
         # 2. Creo una sessione con UUID
         session_uuid = uuid4()
-        data = SessionData(session_id=db_session_id, room_name="room1")
+        data = SessionData(session_id=db_session_id)
         await backend.create(session_uuid, data)
 
         # 3. Attacco cookie (usa UUID)
         cookie.attach_to_response(response, session_uuid)
 
         return {
-            "message_info": "Sessione creata con successo",
+            "status": "Success",
             "db_session_id": db_session_id,
             "session_uuid": str(session_uuid),
         }
@@ -818,3 +889,61 @@ async def create_session(response: Response):
     finally:
         cursor.close()
         conn.close()
+
+async def auto_generate_next_question(room_name: str, session_id: int):
+    """Genera automaticamente la prossima domanda dopo che tutti hanno risposto"""
+    try:
+        import asyncio
+        
+        # Piccolo delay per dare tempo all'utente di leggere le risposte
+        await asyncio.sleep(5)
+        
+        # Genera nuova domanda
+        print("🎯 Auto-generando prossima domanda...")
+        next_question = await get_llm_question()
+        
+        if next_question:
+            print(f"📝 Nuova domanda: {next_question}")
+            
+            # Invia la domanda ai player
+            await manager.send_question_to_players(next_question, room_name)
+            
+            # Salva nel database
+            question_request = QuestionRequest(
+                text=next_question,
+                room_name=room_name,
+                author_id="system-auto",
+                session_id=session_id
+            )
+            saved_question = create_question(question_request)
+            
+            print(f"✅ Domanda salvata con ID: {saved_question.id}")
+            
+            # Genera risposta automatica del bot
+            print("🤖 Generando risposta automatica del bot...")
+            bot_response = await get_llm_response(next_question)
+            
+            # Salva la risposta del bot
+            bot_answer_request = AnswerRequest(
+                question_id=saved_question.id,
+                session_id=session_id,
+                text=bot_response,
+                author_id="bot-auto",
+                author_type="BOT",
+                room_name=room_name
+            )
+            create_answer(bot_answer_request)
+            
+            print(f"🤖 Risposta bot salvata: {bot_response}")
+
+            # await manager.send_message_to_all("Puoi rispondere alla nuova domanda!", "question_new", room_name)
+
+            return next_question
+            
+        else:
+            print("❌ Errore nella generazione della domanda automatica")
+
+            return None
+            
+    except Exception as e:
+        print(f"❌ Errore in auto_generate_next_question: {e}")

@@ -3,48 +3,28 @@
 <head>
     <title>Giudice - Chat</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
             min-height: 100vh;
             padding: 1rem;
         }
-        
         .container {
-            max-width: 1200px;
+            max-width: 1000px;
             margin: 0 auto;
             background: white;
             border-radius: 20px;
             padding: 2rem;
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
         }
-        
         h1 {
-            color: #333;
             text-align: center;
-            margin-bottom: 1rem;
             font-size: 2.5rem;
-            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: #333;
+            margin-bottom: 1rem;
         }
-        
-        h2 {
-            color: #666;
-            text-align: center;
-            margin-bottom: 1.5rem;
-            font-size: 1.2rem;
-        }
-        
         .status-info {
-            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
             color: white;
             padding: 1rem;
             border-radius: 15px;
@@ -52,499 +32,584 @@
             margin-bottom: 1.5rem;
             font-weight: bold;
         }
-        
-        .room-selection {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-        
-        .room-selection p {
-            color: #666;
-            margin-bottom: 1rem;
-            font-size: 1.1rem;
-        }
-        
-        .room-buttons {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-bottom: 2rem;
-        }
-        
-        .room-button {
-            background: linear-gradient(135deg, #74b9ff, #0984e3);
-            color: white;
-            border: none;
-            padding: 0.8rem 1.5rem;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: bold;
-            transition: all 0.3s ease;
-            box-shadow: 0 5px 15px rgba(116, 185, 255, 0.3);
-        }
-        
-        .room-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(116, 185, 255, 0.4);
-        }
-        
         .question-form {
-            background: #f8f9fa;
-            padding: 1.5rem;
-            border-radius: 15px;
             margin-bottom: 2rem;
-            border: 2px solid #e9ecef;
-        }
-        
-        .question-form form {
             display: flex;
             gap: 1rem;
-            align-items: center;
         }
-        
         .question-form input {
             flex: 1;
             padding: 1rem;
-            border: 2px solid #dee2e6;
             border-radius: 25px;
+            border: 2px solid #eee;
             font-size: 1rem;
             transition: all 0.3s ease;
+            background-color: #fff;
+            color: #333;
             outline: none;
         }
-        
+        /* Stato ABILITATO (focus) */
         .question-form input:focus {
             border-color: #ff6b6b;
-            box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
+            box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.2);
+            background-color: #fff;
         }
-        
+        /* Stato DISABILITATO */
+        .question-form input:disabled {
+            background-color: #f8f9fa;
+            border-color: #d1d3d4;
+            color: #6c757d;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        /* Placeholder quando disabilitato */
+        .question-form input:disabled::placeholder {
+            color: #adb5bd;
+            opacity: 1;
+        }
         .send-button {
             background: linear-gradient(135deg, #ff6b6b, #ee5a24);
             color: white;
             border: none;
             padding: 1rem 2rem;
             border-radius: 25px;
-            cursor: pointer;
-            font-size: 1rem;
             font-weight: bold;
+            cursor: pointer;
             transition: all 0.3s ease;
-            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
+            opacity: 1;
         }
-        
-        .send-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(255, 107, 107, 0.4);
+        /* Bottone DISABILITATO */
+        .send-button:disabled {
+            background: #d1d3d4 !important;
+            cursor: not-allowed;
+            opacity: 0.6;
+            transform: none;
         }
-        
+        /* Rimuovi effetti hover quando disabilitato */
+        .send-button:disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+        /* Feedback di attesa */
+        .question-form {
+            position: relative;
+        }
+
         .dual-chat {
             display: flex;
             gap: 2rem;
-            justify-content: space-around;
         }
-        
         .chat-box {
             flex: 1;
-            background: #ffffff;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-            padding: 1.5rem;
+            border: 2px solid #eee;
             border-radius: 15px;
-            max-height: 500px;
+            padding: 1rem;
+            max-height: 400px;
             overflow-y: auto;
-            border: 1px solid #eee;
-        }        .chat-box h3 {
-            color: #495057;
-            margin-bottom: 1rem;
+        }
+        .chat-box h3 {
             text-align: center;
-            font-size: 1.2rem;
+            margin-bottom: 1rem;
         }
-        
-        .chat-box:first-child h3 {
-            color: #28a745;
-        }
-        
-        .chat-box:last-child h3 {
-            color: #dc3545;
-        }
-        
         ul {
             list-style: none;
             padding: 0;
         }
-        
         li {
+            background: #f8f9fa;
             margin-bottom: 0.8rem;
-            background: white;
-            padding: 1rem;
-            border-radius: 15px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            border-left: 4px solid #74b9ff;
-            transition: all 0.3s ease;
-        }
-        
-        li:hover {
-            transform: translateX(5px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
-        }
-        
-        .chat-box:first-child li {
-            border-left-color: #28a745;
-        }
-        
-        .chat-box:last-child li {
-            border-left-color: #dc3545;
-        }
-        
-        @media (max-width: 768px) {
-            .container {
-                padding: 1rem;
-            }
-            
-            h1 {
-                font-size: 2rem;
-            }
-            
-            .dual-chat {
-                flex-direction: column;
-                gap: 1rem;
-            }
-            
-            .question-form form {
-                flex-direction: column;
-            }
-            
-            .room-buttons {
-                flex-direction: column;
-                align-items: center;
-            }
-        }
-        
-        /* Scrollbar personalizzata */
-        .chat-box::-webkit-scrollbar {
-            width: 8px;
-        }
-        
-        .chat-box::-webkit-scrollbar-track {
-            background: #f1f1f1;
+            padding: 0.8rem;
             border-radius: 10px;
         }
-        
-        .chat-box::-webkit-scrollbar-thumb {
-            background: #74b9ff;
-            border-radius: 10px;
-        }
-        
-        .chat-box::-webkit-scrollbar-thumb:hover {
-            background: #0984e3;
+        .playerA { border-left: 4px solid #28a745; }
+        .playerB { border-left: 4px solid #dc3545; }
+
+        /* Nuovo: stile per la domanda mostrata sopra le risposte */
+        .question-item {
+            background: linear-gradient(90deg,#fff7e6,#fff1cc);
+            border: 2px dashed #f0ad4e;
+            color: #663c00;
+            font-weight: 700;
+            text-align: center;
+            padding: 0.8rem;
+            margin: 0.6rem 0;
+            border-radius: 12px;
         }
 
-        /* Stili per le domande e risposte */
-        .judge-question {
-            background-color: #f5f5f5;
-            padding: 12px;
-            margin: 15px 0 5px 0;
+        /* Notifica e separatore */
+        .notification {
+            margin-top: 1rem;
+            padding: 0.6rem 1rem;
+            background: rgba(0,0,0,0.06);
             border-radius: 8px;
-            font-style: italic;
-            border-left: 4px solid #4285f4;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        
-        .question-timestamp {
-            font-size: 0.7em;
-            color: #999;
-            margin-bottom: 5px;
-            text-align: right;
-        }
-        
-        .question-text {
-            font-size: 1em;
-            color: #333;
-        }
-        
-        .answer-timestamp {
-            font-size: 0.7em;
-            color: #999;
-            margin-bottom: 5px;
-            text-align: right;
-        }
-        
-        .player-answer {
-            background-color: #e8f5e9;
-            padding: 12px;
-            margin: 5px 0;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        
-        .question-reference {
-            font-size: 0.85em;
-            color: #666;
-            font-style: italic;
-            margin-bottom: 8px;
-            padding-bottom: 8px;
-            border-bottom: 1px dashed #ccc;
-        }
-        
-        .answer-text {
-            font-weight: 500;
-            color: #333;
-        }
-        
-        .chat-separator {
-            height: 20px;
-            margin: 10px 0;
-            border-bottom: 1px solid #eee;
-            position: relative;
-        }
-        
-        .chat-separator:after {
-            content: "•••";
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 0 10px;
-            color: #ccc;
-            font-size: 10px;
-            letter-spacing: 2px;
-        }
-        
-        .round-separator {
-            height: 30px;
-            margin: 20px 0;
-            border-bottom: 2px dashed #ddd;
-            position: relative;
             text-align: center;
         }
-        
-        .round-separator:after {
-            content: "TURNO COMPLETATO";
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 0 15px;
-            color: #4CAF50;
-            font-size: 12px;
+        .round-separator {
+            height: 8px;
+            border-radius: 999px;
+            background: linear-gradient(90deg,#e9ecef,#f8f9fa);
+            margin: 0.5rem 0 1rem 0;
+        }
+
+        /* Form di giudizio */
+        .judgment-form {
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            border: 2px solid #eee;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #fff, #fdf2f2);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            text-align: center;
+            animation: fadeIn 0.6s ease;
+        }
+
+        /* Contenitore radio in orizzontale */
+        .judgment-options {
+            display: flex;
+            justify-content: center;
+            gap: 2rem; /* spazio tra Player A e Player B */
+            margin: 1rem 0;
+        }
+
+        .judgment-form h3 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+
+        .judgment-form label {
+            display: flex;
+            align-items: center;
+            font-size: 1.1rem;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 0.6rem 1rem;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+
+        /* Radio */
+        .judgment-form input[type="radio"] {
+            margin-right: 0.5rem;
+            accent-color: #ff6b6b;
+        }
+
+        /* Hover */
+        .judgment-form label:hover {
+            background: rgba(255, 107, 107, 0.08);
+            transform: scale(1.02);
+        }
+
+        /* Opzione selezionata */
+        .judgment-form input[type="radio"]:checked + span {
             font-weight: bold;
-            letter-spacing: 1px;
+            color: #ee5a24;
+        }
+
+        /* Bottone di conferma */
+        .confirm-button {
+            margin-top: 1rem;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.8rem;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+        }
+
+        .confirm-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+        }
+
+        /* Animazione di entrata */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Modale per il risultato finale */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
         }
         
-        .notification {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background-color: #4CAF50;
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            animation: slideInUp 0.4s ease;
+        }
+        
+        .result-win .modal-content {
+            background: linear-gradient(135deg, #00b894, #00a085);
             color: white;
-            padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            z-index: 1000;
-            animation: fadeIn 0.3s, fadeOut 0.5s 4.5s;
+        }
+        
+        .result-lose .modal-content {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+        
+        .result-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+        
+        .result-title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+        
+        .result-message {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
             opacity: 0.9;
         }
         
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 0.9; transform: translateY(0); }
+        .result-details {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            font-size: 1rem;
         }
         
-        @keyframes fadeOut {
-            from { opacity: 0.9; transform: translateY(0); }
-            to { opacity: 0; transform: translateY(20px); }
+        .close-button {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .close-button:hover {
+            background: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>👨‍⚖️ WebSocket Chat - Giudice</h1>
+        <h1>👨‍⚖️ Giudice - Domande & Risposte</h1>
         
         <div class="status-info">
-            Your ID: <span id="ws-id"></span> | Room: <span id="room-id">Seleziona una stanza</span>
-        </div>
-        
-        <div class="room-selection">
-            <p>🏠 Scegli la stanza per iniziare:</p>
-            <div class="room-buttons">
-                <button type="button" class="room-button" id="room1">📍 Stanza 1</button>
-                <button type="button" class="room-button" id="room2">📍 Stanza 2</button>
-                <button type="button" class="room-button" id="room3">📍 Stanza 3</button>
-            </div>
-        </div>
-        
-        <div class="question-form">
-            <form id="messageForm">
-                <input type="text" id="messageText" autocomplete="off" placeholder="💭 Scrivi una domanda per i partecipanti..." />
-                <button type="submit" class="send-button">📤 Invia Domanda</button>
-            </form>
+            🆔 ID: <span id="ws-id"></span> | 
+            🏠 Room: <span id="room-id">Nessuna</span>
         </div>
 
+        <!-- Form per inviare domande -->
+        <div class="question-form">
+            <input type="text" id="questionInput" placeholder="✍️ Scrivi una domanda..." />
+            <button class="send-button" onclick="sendQuestion()">📤 Invia</button>
+        </div>
+
+        <div id="judgmentContainer"></div>
+
+        <!-- Chat con risposte -->
         <div class="dual-chat">
             <div class="chat-box">
-                <h3>🟢 Risposte da Partecipante HUMAN</h3>
-                <ul id='messages1'></ul>
+                <h3>🟢 Risposte Player A</h3>
+                <ul id="messagesA"></ul>
             </div>
             <div class="chat-box">
-                <h3>🔴 Risposte da Partecipante BOT</h3>
-                <ul id='messages2'></ul>
+                <h3>🔴 Risposte Player B</h3>
+                <ul id="messagesB"></ul>
             </div>
         </div>
     </div>
 
-    <script src="../static/chat.js"></script>
     <script>
-        let currentQuestion = null;
-        let currentQuestionId = null;
+    let ws = null;
+    let clientId = Math.floor(Math.random() * 100000);
+    let lastQuestion = null;
+    let questionCounter = 0;
 
-        document.getElementById("messageForm").addEventListener("submit", function(event) {
-            event.preventDefault();
-            sendMessage(event);
-        });
-        
-        // Override della funzione sendMessage per tracciare le domande
-        function sendMessage(event) {
-            // Previeni qualsiasi comportamento di default
-            if (event) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
-            
-            const input = document.getElementById("messageText");
-            const text = input.value.trim();
-            
-            if (!text) {
-                return false;
-            }
-            
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                currentQuestion = text;
-
-                // Non cancellare le chat box per mantenere la cronologia
-                // document.getElementById('messages1').innerHTML = '';
-                // document.getElementById('messages2').innerHTML = '';
-
-                const message = {
-                    type: "question",
-                    text: currentQuestion
-                }
-
-                try {
-                    ws.send(JSON.stringify(message));
-                    input.value = '';
-                    
-                    // Aggiungi la domanda al messaggio del giudice
-                    const questionElement = document.createElement('div');
-                    questionElement.classList.add('judge-question');
-                    
-                    // Aggiungi timestamp per meglio tracciare la cronologia
-                    const timestamp = new Date().toLocaleTimeString();
-                    questionElement.innerHTML = `
-                        <div class="question-timestamp">${timestamp}</div>
-                        <div class="question-text"><strong>Tua domanda:</strong> ${text}</div>
-                    `;
-                    
-                    document.getElementById('messages1').appendChild(questionElement.cloneNode(true));
-                    document.getElementById('messages2').appendChild(questionElement.cloneNode(true));
-                    
-                    console.log("Domanda inviata:", text);
-                } catch (error) {
-                    console.error("Errore nell'invio:", error);
-                }
-            } else {
-                console.warn("WebSocket non connesso. Seleziona prima una stanza!");
-                alert("Seleziona prima una stanza!");
-            }
+    document.getElementById("questionInput").addEventListener("keydown", function(e) {
+       if (e.key === "Enter") {
+            e.preventDefault();
+            sendQuestion();
         }
+    })
 
-        // Override della funzione onmessage per gestire i messaggi
-        ws_onmessage_override = function(event) {
-            console.log("Messaggio ricevuto:", event.data);
-            
+    function setupWebSocket(roomName="room1") {
+        const url = `ws://localhost:8003/ws/${roomName}/${clientId}?role=JUDGE`;
+        console.log("🔌 Connessione a:", url);
+
+        ws = new WebSocket(url);
+
+        ws.onopen = () => {
+            document.getElementById("room-id").textContent = roomName;
+            document.getElementById("ws-id").textContent = clientId;
+            console.log("✅ Connesso come JUDGE");
+        };
+
+        let pendingAnswers = [];
+
+        ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                
-                // Se riceviamo l'ID della domanda
-                if (data.type === "question_saved") {
-                    currentQuestionId = data.question_id;
-                    console.log("ID domanda salvato:", currentQuestionId);
-                }
-                
-                // Se riceviamo una risposta da un player
-                else if (data.type === "player_answer") {
-                    const playerNumber = data.player;
-                    const answer = data.text;
+
+                console.log(data);
+
+                const button = document.querySelector(".send-button");
+                const input = document.getElementById("questionInput");
+
+                if (data.type === "player_answer") {
+                    pendingAnswers.push(data); // salva in memoria le risposte
+                    console.log('pending: ' + pendingAnswers);
+                } else if(data.type == "time_to_judge"){
+                    input.disabled = false;
+                    input.placeholder = "✍️ Scrivi una domanda...";
+                    button.disabled = false;
+
+                    const container = document.getElementById("judgmentContainer");
                     
-                    const messagesList = document.getElementById(`messages${playerNumber}`);
-                    
-                    // Crea un blocco di risposta con separatore per distinguerla meglio
-                    const answerElement = document.createElement('li');
-                    answerElement.classList.add('player-answer');
-                    
-                    // Aggiungi un riferimento alla domanda corrente per chiarezza
-                    const timestamp = new Date().toLocaleTimeString();
-                    answerElement.innerHTML = `
-                        <div class="answer-timestamp">${timestamp}</div>
-                        <div class="question-reference">In risposta a: "${currentQuestion}"</div>
-                        <div class="answer-text">${answer}</div>
+                    container.innerHTML = `
+                        <div class="judgment-form">
+                            <h3>⚖️ Chi pensi sia UMANO?</h3>
+                            <div class="judgment-options">
+                                <label>
+                                    <input type="radio" name="chosen_player" value="A">
+                                    <span>Player A</span>
+                                </label>
+                                <label>
+                                    <input type="radio" name="chosen_player" value="B">
+                                    <span>Player B</span>
+                                </label>
+                            </div>
+                            <button class="confirm-button" onclick="submitJudgment()">Conferma scelta</button>
+                        </div>
                     `;
                     
-                    messagesList.appendChild(answerElement);
-                    
-                    // Aggiungi un separatore per migliorare la leggibilità
-                    const separator = document.createElement('div');
-                    separator.className = 'chat-separator';
-                    messagesList.appendChild(separator);
-                    
-                    // Scorri automaticamente alla fine
-                    messagesList.scrollTop = messagesList.scrollHeight;
-                    
-                    console.log(`Risposta ricevuta da player ${playerNumber}:`, answer);
-                }
-                
-                // Se tutti hanno risposto
-                else if (data.type === "all_answered") {
-                    console.log("Tutti i player hanno risposto!");
-                    
-                    // Abilita il form per la prossima domanda
-                    document.getElementById("messageText").disabled = false;
-                    document.querySelector(".send-button").disabled = false;
-                    
-                    // Mostra una notifica
+                    console.log(data.message);
+                } else if(data.type == "final_judgment"){
+                    console.log(data.judgment)
+
+                    const patterns = ["GIUDICE ha VINTO", "GIUDICE ha PERSO"];
+                    const judgeResult = patterns.find(p => data.judgment.includes(p));
+
+                    console.log(judgeResult);
+
+                    if (judgeResult) {
+                        showResultModal(judgeResult);
+                    }
+                }else if (data.type === "all_answered") {//DA SISTEMARE
+                    console.log("✅ Tutti i player hanno risposto!");
+
+                    console.log(pendingAnswers);
+
+                    // Stampa tutte le risposte accumulate
+                    pendingAnswers.forEach(ans => {
+                        const li = document.createElement("li");
+                        li.textContent = ans.text;
+
+                        if (ans.player === 1) {
+                            li.className = "playerA";
+                            document.getElementById("messagesA").appendChild(li);
+                        } else if (ans.player === 2) {
+                            li.className = "playerB";
+                            document.getElementById("messagesB").appendChild(li);
+                        }
+                    });
+
+                    // Svuota il buffer
+                    pendingAnswers = [];
+
+                    scrollAllChats();
+
+                    input.disabled = false;
+                    input.placeholder = "✍️ Scrivi una domanda...";
+                    button.disabled = false;
+
+                    // Notifica visiva
                     const notification = document.createElement('div');
                     notification.classList.add('notification');
                     notification.textContent = "✅ " + data.message;
                     document.querySelector('.container').appendChild(notification);
-                    
-                    // Aggiungi un separatore più evidente per indicare il completamento di un turno
+
+                    // Aggiungi un separatore nelle chat
                     const separator1 = document.createElement('div');
                     separator1.className = 'round-separator';
-                    document.getElementById('messages1').appendChild(separator1);
-                    
+                    document.getElementById('messagesA').appendChild(separator1);
+
                     const separator2 = document.createElement('div');
                     separator2.className = 'round-separator';
-                    document.getElementById('messages2').appendChild(separator2);
-                    
-                    // Scorri automaticamente verso il basso
-                    document.getElementById('messages1').scrollTop = document.getElementById('messages1').scrollHeight;
-                    document.getElementById('messages2').scrollTop = document.getElementById('messages2').scrollHeight;
-                    
-                    // Rimuovi la notifica dopo 5 secondi
+                    document.getElementById('messagesB').appendChild(separator2);
+
+                    // Scroll automatico ai separatori
+                    document.getElementById('messagesA').scrollTop = document.getElementById('messagesA').scrollHeight;
+                    document.getElementById('messagesB').scrollTop = document.getElementById('messagesB').scrollHeight;
+
+                    // Rimuovi la notifica dopo 7 secondi
                     setTimeout(() => {
                         notification.remove();
-                    }, 5000);
+                    }, 7000);
                 }
-                
-            } catch (e) {
-                console.error("Errore parsing JSON:", e);
-                
-                // Gestisci messaggi di testo semplice (backward compatibility)
-                const messageElement = document.createElement('li');
-                messageElement.textContent = event.data;
-                document.getElementById('messages1').appendChild(messageElement);
+
+            } catch (err) {
+                console.error("❌ Errore parsing messaggio:", err);
             }
         };
+    }
+
+    function sendQuestion() {
+        const input = document.getElementById("questionInput");
+        const button = document.querySelector(".send-button");
+        const text = input.value.trim();
+
+        if (!text) return;
+
+        // Aggiungi la domanda nelle due chat PRIMA di inviarla (in modo che le risposte appaiano sotto)
+        questionCounter += 1;
+        const qid = `q-${Date.now()}-${questionCounter}`;
+        lastQuestion = { id: qid, text };
+
+        const qLi1 = document.createElement('li');
+        qLi1.className = 'question-item';
+        qLi1.textContent = `Domanda: ${text}`;
+        qLi1.setAttribute('data-qid', qid);
+        document.getElementById('messagesA').appendChild(qLi1);
+
+        const qLi2 = document.createElement('li');
+        qLi2.className = 'question-item';
+        qLi2.textContent = `Domanda: ${text}`;
+        qLi2.setAttribute('data-qid', qid);
+        document.getElementById('messagesB').appendChild(qLi2);
+
+        scrollAllChats(); 
+
+        // Invia la domanda al server (includiamo un qid nel payload)
+        const msg = { type: "question", text: text, qid: qid };
+        ws.send(JSON.stringify(msg));
+        console.log("📨 Domanda inviata:", text);
+
+        // Pulisci l'input
+        input.value = "";
+
+        input.disabled = true;
+        input.placeholder = "⏳ Attendo risposte...";
+
+        button.disabled = true;
+    }
+
+    // 👉 chiama SEMPRE questa dopo aver aggiunto un nuovo <li>
+    function scrollAllChats() {
+        document.querySelectorAll('.chat-box').forEach(box => {
+            box.scrollTop = box.scrollHeight;
+        });
+    }
+
+    function submitJudgment() {
+        const selected = document.querySelector('input[name="chosen_player"]:checked');
+        if (!selected) {
+            alert("Seleziona un giocatore prima di confermare!");
+            return;
+        }
+
+        // Invia solo la scelta al backend via WebSocket
+        ws.send(JSON.stringify({
+            type: "judge_choice",
+            chosen_player_human: selected.value
+        }));
+    }
+
+    function showResultModal(result) {
+        // Determina se ha vinto o perso
+        const hasWon = result.includes("VINTO");
+        
+        // Crea l'overlay della modale
+        const modalOverlay = document.createElement('div');
+        modalOverlay.className = `modal-overlay ${hasWon ? 'result-win' : 'result-lose'}`;
+        
+        // Contenuto della modale
+        modalOverlay.innerHTML = `
+            <div class="modal-content">
+                <span class="result-icon">${hasWon ? '🎉' : '😔'}</span>
+                <div class="result-title">${hasWon ? 'HAI VINTO!' : 'HAI PERSO!'}</div>
+                <div class="result-details">
+                ${hasWon ? 
+                    '👏 Ottimo intuito! Sei riuscito a riconoscere correttamente chi era umano.' : 
+                    '😵 Questa volta ti hanno ingannato... hai scambiato il bot per umano o viceversa.'
+                }
+                </div>
+                  <button class="close-button" onclick="closeResultModal()">
+                    Chiudi
+                </button>
+                <a href="/singleplayer" class="close-button"">
+                    🏠 Torna al Menu
+                </a>
+
+            </div>
+        `;
+        
+        // Aggiungi al body
+        document.body.appendChild(modalOverlay);
+        
+        // Salva riferimento per poterla chiudere
+        window.currentModal = modalOverlay;
+        
+        console.log("🎯 Risultato mostrato:", result);
+    }
+
+    // ✅ NUOVA FUNZIONE: Chiudi modale
+    function closeResultModal() {
+        if (window.currentModal) {
+            window.currentModal.remove();
+            window.currentModal = null;
+        }
+    }
+
+    // Chiudi modale anche cliccando sull'overlay
+    document.addEventListener('click', function(event) {
+        if (event.target.classList.contains('modal-overlay')) {
+            closeResultModal();
+        }
+    });
+
+    // Avvia connessione alla stanza di default
+    setupWebSocket("room1");
     </script>
 </body>
 </html>

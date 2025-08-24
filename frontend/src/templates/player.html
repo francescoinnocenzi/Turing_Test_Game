@@ -147,6 +147,19 @@
             transition: all 0.3s ease;
             box-shadow: 0 5px 15px rgba(0, 184, 148, 0.3);
         }
+
+         /* Bottone DISABILITATO */
+        .send-button:disabled {
+            background: #d1d3d4 !important;
+            cursor: not-allowed;
+            opacity: 0.6;
+            transform: none;
+        }
+        /* Rimuovi effetti hover quando disabilitato */
+        .send-button:disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
         
         .send-button:hover {
             transform: translateY(-2px);
@@ -192,6 +205,118 @@
         .emoji {
             font-size: 1.5rem;
             margin-right: 0.5rem;
+        }
+        
+        /* Modale per il risultato finale */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            animation: slideInUp 0.4s ease;
+        }
+        
+        .result-win .modal-content {
+            background: linear-gradient(135deg, #00b894, #00a085);
+            color: white;
+        }
+        
+        .result-lose .modal-content {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+        
+        .result-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+        
+        .result-title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+        
+        .result-message {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+        
+        .result-details {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            font-size: 1rem;
+        }
+        
+        .close-button {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .close-button:hover {
+            background: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Responsive per mobile */
+        @media (max-width: 768px) {
+            .modal-content {
+                padding: 2rem;
+                max-width: 95%;
+            }
+            
+            .result-title {
+                font-size: 2rem;
+            }
+            
+            .result-icon {
+                font-size: 3rem;
+            }
         }
         
         @media (max-width: 768px) {
@@ -265,7 +390,7 @@
             <span class="emoji">🏠</span>Room: <span id="room-id">Seleziona una stanza</span>
         </div>
         
-        <div class="room-selection">
+        <!-- <div class="room-selection">
             <p>🏠 Scegli la stanza per partecipare:</p>
             <div class="room-buttons">
                 <button type="button" class="room-button" id="room1">📍 Stanza 1</button>
@@ -277,11 +402,11 @@
         <div class="room-selection">
             <p>🎮 Seleziona modalità:</p>
             <div class="room-buttons">
-                <button type="button" id="btn-single" class="room-button" onclick="setupWebSocket('room1', 'single')">🧍 Singleplayer</button>
+                <button type="button" id="btn-single" class="room-button" onclick="">🧍 Singleplayer</button>
                 <button type="button" id="btn-multi" class="room-button" onclick="setupWebSocket('room1', 'multi')">👥 Multiplayer</button>
 
             </div>
-        </div>
+        </div> -->
 
         
         <div id="current-question" class="current-question waiting">
@@ -290,8 +415,8 @@
 
         <div class="answer-form">
             <form id="messageForm" onsubmit="return false;">
-                <input type="text" id="messageText" autocomplete="off" placeholder="💬 Scrivi la tua risposta qui..." />
-                <button type="submit" class="send-button">📤 Invia Risposta</button>
+                <input type="text" id="messageText" disabled="true" autocomplete="off" placeholder="⏳ Attendi la domanda del giudice..." />
+                <button type="submit" disabled="true" class="send-button">📤 Invia Risposta</button>
             </form>
         </div>
         
@@ -348,6 +473,10 @@
         };
     }
 
+    window.onload = function(){
+        setupWebSocket('room1', 'single');
+    }
+
     // --- invio messaggi ---
     document.getElementById('messageForm').addEventListener('submit', sendMessage);
 
@@ -357,7 +486,12 @@
             event.stopPropagation();
         }
 
+        const sendBtn = document.querySelector('.send-button');
+        sendBtn.disabled = true;
+
         const input = document.getElementById("messageText");
+        input.disabled = true;
+        input.placeholder = "⏳ Attendi la domanda del giudice...";
         const text = input.value.trim();
 
         if (!text) {
@@ -389,10 +523,19 @@
     ws_onmessage_override = function(event) {
         try {
             let msg = JSON.parse(event.data);
+            console.log(msg.type);
+            
             if (msg.type === "question") {
                 const questionDiv = document.getElementById("current-question");
                 questionDiv.innerHTML = `<span class="emoji">❓</span>Domanda: ${msg.text}`;
                 questionDiv.className = "current-question new-question";
+
+                const input = document.getElementById("messageText");
+                input.disabled = false;
+                input.placeholder = "💬 Scrivi la risposta qui..."
+
+                const sendBtn = document.querySelector('.send-button');
+                sendBtn.disabled = false;
 
                 if (msg.id) {
                     currentQuestionId = msg.id;
@@ -401,8 +544,30 @@
                 setTimeout(() => {
                     questionDiv.className = "current-question";
                 }, 2000);
-            } else if (msg.type === "system") {
-                // system message, ignora
+            } else if(msg.type == "question_new"){
+                // const input = document.getElementById("messageText");
+                // input.disabled = false;
+                // input.placeholder = "💬 Scrivi la risposta qui..."
+
+            } else if (msg.type === "final_judgment") {
+                console.log("🏆 Giudizio finale ricevuto:", msg.judgment);
+            
+                const patterns = ["HUMAN ha VINTO", "HUMAN ha PERSO"];
+                const humanResult = patterns.find(p => msg.judgment.includes(p));
+
+                if (humanResult) {
+                    showResultModal(humanResult);
+                }
+                            
+                // Aggiungi anche alla cronologia
+                // const messages = document.getElementById('messages');
+                // const message = document.createElement('li');
+                // message.innerHTML = `<strong>🏆 Giudizio finale:</strong> ${msg.judgment}`;
+                // message.style.backgroundColor = '#e3f2fd';
+                // message.style.borderLeft = '4px solid #2196f3';
+                // messages.appendChild(message);
+                // messages.scrollTop = messages.scrollHeight;
+
             } else {
                 const messages = document.getElementById('messages');
                 const message = document.createElement('li');
@@ -419,24 +584,77 @@
         }
     };
 
+    function showResultModal(result) {
+        // Determina se ha vinto o perso
+        const hasWon = result.includes("VINTO");
+        
+        // Crea l'overlay della modale
+        const modalOverlay = document.createElement('div');
+        modalOverlay.className = `modal-overlay ${hasWon ? 'result-win' : 'result-lose'}`;
+        
+        // Contenuto della modale
+        modalOverlay.innerHTML = `
+            <div class="modal-content">
+                <span class="result-icon">${hasWon ? '🎉' : '😔'}</span>
+                <div class="result-title">${hasWon ? 'HAI VINTO!' : 'HAI PERSO!'}</div>
+                <div class="result-details">
+                    ${hasWon ? 
+                        '🎯 Sei riuscito a ingannare il giudice IA!<br>La tua strategia di risposta è stata efficace.' : 
+                        '🤖 Il giudice IA ti ha identificato come umano.<br>La prossima volta prova una strategia diversa!'
+                    }
+                </div>
+                  <button class="close-button" onclick="closeResultModal()">
+                    Chiudi
+                </button>
+                <a href="/singleplayer" class="close-button"">
+                    🏠 Torna al Menu
+                </a>
+
+            </div>
+        `;
+        
+        // Aggiungi al body
+        document.body.appendChild(modalOverlay);
+        
+        // Salva riferimento per poterla chiudere
+        window.currentModal = modalOverlay;
+        
+        console.log("🎯 Risultato mostrato:", result);
+    }
+
+    // ✅ NUOVA FUNZIONE: Chiudi modale
+    function closeResultModal() {
+        if (window.currentModal) {
+            window.currentModal.remove();
+            window.currentModal = null;
+        }
+    }
+
+    // Chiudi modale anche cliccando sull'overlay
+    document.addEventListener('click', function(event) {
+        if (event.target.classList.contains('modal-overlay')) {
+            closeResultModal();
+        }
+    });
+
     // --- collego i bottoni room ---
-    const rooms = ['room1', 'room2', 'room3'];
+    // const rooms = ['room1', 'room2', 'room3'];
 
-    document.querySelector('#room1').addEventListener('click', () => {
-        console.log("Hai scelto:", rooms[0]);
-        setupWebSocket(rooms[0], mode || "multi"); // se non hai ancora scelto mode, default = multi
-    });
+    // document.querySelector('#room1').addEventListener('click', () => {
+    //     console.log("Hai scelto:", rooms[0]);
+    //     setupWebSocket(rooms[0], mode || "multi"); // se non hai ancora scelto mode, default = multi
+    // });
 
-    // puoi aggiungere anche pulsanti per scegliere la modalità:
-    document.querySelector('#btn-single').addEventListener('click', () => {
-        mode = "single";
-        console.log("Modalità impostata:", mode);
-    });
+    // // puoi aggiungere anche pulsanti per scegliere la modalità:
+    // document.querySelector('#btn-single').addEventListener('click', () => {
+    //     mode = "single";
+    //     console.log("Modalità impostata:", mode);
+    // });
 
-    document.querySelector('#btn-multi').addEventListener('click', () => {
-        mode = "multi";
-        console.log("Modalità impostata:", mode);
-    });
+    // document.querySelector('#btn-multi').addEventListener('click', () => {
+    //     mode = "multi";
+    //     console.log("Modalità impostata:", mode);
+    // });
 
     </script>
 </body>
