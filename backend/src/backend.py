@@ -414,13 +414,14 @@ async def handle_question(room_name, client_id, role, message, websocket, mode, 
     bot2_data = await trova_simile(q_req)
     bot2_resp = bot2_data["risposta_trovata"]
     
-    #Salva risposta bot retrival
+    #Salva risposta bot retrival solo se generata da LLM (perche HUMAN è gia presente nel DB)
+
     create_answer(AnswerRequest(
         question_id=saved_q.id,
         session_id=session_id,
         text=bot2_resp,
         author_id="bot-retrieval",
-        author_type="BOT",
+        author_type="BOT_AS_HUMAN" if bot2_data["tipo_risposta"] == "LLM" else "HUMAN",
         room_name=room_name
     ))
     await manager.send_answer_to_judge(bot2_resp, room_name, 1) #metto 1 perche risponde al posto di HUMAN
@@ -461,19 +462,6 @@ async def handle_answer(room_name, client_id, role, message, websocket, mode, se
             author_type=role,
             room_name=room_name
         ))
-    '''
-    # Se HUMAN ha risposto in singleplayer → genera risposta automatica del bot
-    if role == "HUMAN" and mode == "single": 
-        bot_resp = await get_llm_response(text)
-        create_answer(AnswerRequest(
-            question_id=question_id,
-            session_id=1,
-            text=bot_resp,
-            author_id="bot-auto",
-            author_type="BOT",
-            room_name=room_name
-        ))
-        await manager.send_answer_to_judge(bot_resp, room_name, 2) #bot'''
     
     # Usa la funzione centralizzata per verificare se tutti hanno risposto
     await check_all_answered(question_id, room_name, session_id=session_id, role=role, mode=mode)
@@ -775,6 +763,7 @@ def get_model():
 
 @app.post("/trova_simile")
 async def trova_simile(request: QuestionRequest):
+    
     # In questo modo il backend parte subito, e il modello viene caricato solo alla prima chiamata API.
     model = get_model()
 
@@ -788,20 +777,22 @@ async def trova_simile(request: QuestionRequest):
         cursor.execute("""
             SELECT id,text
             FROM questions
-            """
+            WHERE session_id != ?
+            """, (request.session_id,)
         )
         #lista di coppie trovate (id,question)
         frasi_trovate = cursor.fetchall() # [(1,"ciao"),(2,"prova")...]
         print(input_frase,frasi_trovate)
         if not frasi_trovate:
-            #se non trovo domanda simile allora ne creo una nuova 
+            #se non trovo domande precedenti allora creo risposta  nuova con LLM
             risposta_nuova = await get_llm_response(input_frase)
 
             return {
                 "frase_input": input_frase,
                 "frase_simile": None,
                 "risposta_trovata": risposta_nuova,
-                "similarità": 0.0
+                "similarità": 0.0,
+                "tipo_risposta" : "LLM"
             }
         #lista di sole question trovate
         frasi_db = [row[1] for row in frasi_trovate]
@@ -824,7 +815,7 @@ async def trova_simile(request: QuestionRequest):
         cursor.execute("""
             SELECT id,text
             FROM answers
-            WHERE question_id = ?
+            WHERE question_id = ? and author_type = 'HUMAN'
             ORDER BY RAND()
             LIMIT 1
             """, (best_id,)
@@ -840,12 +831,13 @@ async def trova_simile(request: QuestionRequest):
         conn.close()
     print(f"BEST SCORE {best_score}")
 
-    if best_score > soglia_similarità :
+    if best_score > soglia_similarità and risposta_trovata is not None:
         return {
             "frase_input": input_frase,
             "frase_simile": best_sentence,
             "risposta_trovata": risposta_trovata,
-            "similarità": best_score
+            "similarità": best_score,
+            "tipo_risposta" : "HUMAN"
         }
     else:
         risposta_nuova = await get_llm_response(input_frase)
@@ -854,7 +846,8 @@ async def trova_simile(request: QuestionRequest):
             "frase_input": input_frase,
             "frase_simile": None,
             "risposta_trovata": risposta_nuova,
-            "similarità": 0.0
+            "similarità": 0.0,
+            "tipo_risposta" : "LLM"
         }
     
 @app.post("/create/session")

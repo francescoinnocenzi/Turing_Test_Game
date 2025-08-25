@@ -1,7 +1,6 @@
 from fastapi import WebSocket
 import json
 
-DEFAULT_ROLES = ["JUDGE", "HUMAN", "BOT"]  # Ruoli disponibili in ordine
 
 # Gestore delle connessioni WebSocket
 class ConnectionManager:

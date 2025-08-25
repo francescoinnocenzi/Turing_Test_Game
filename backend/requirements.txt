@@ -35,8 +35,7 @@ sentence-transformers>=2.2.2,<5.2.0
 # # PyTorch CPU-only
 torch==2.2.0
 -f https://download.pytorch.org/whl/cpu/torch_stable.html
-#torchvision
-#torchaudio
+
 
 # For safety: lock NumPy version to <2 due to compatibility issues
 numpy<2
