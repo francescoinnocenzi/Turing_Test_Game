@@ -574,18 +574,20 @@
                     '😵 Questa volta ti hanno ingannato... hai scambiato il bot per umano o viceversa.'
                 }
                 </div>
-                  <button class="close-button" onclick="closeResultModal()">
-                    Chiudi
-                </button>
+                
                 <a href="/singleplayer" class="close-button"">
                     🏠 Torna al Menu
                 </a>
-
+                <button id="play-again" class="close-button"">
+                    🎮 Gioca ancora
+                </button> 
             </div>
         `;
         
         // Aggiungi al body
         document.body.appendChild(modalOverlay);
+
+        createSession(document.getElementById('play-again'));
         
         // Salva riferimento per poterla chiudere
         window.currentModal = modalOverlay;
@@ -599,6 +601,34 @@
             window.currentModal.remove();
             window.currentModal = null;
         }
+    }
+
+    function createSession(bottone){
+        bottone.addEventListener('click', async (event) => {
+            event.preventDefault();
+            try {
+                const response = await fetch("http://localhost:8003/create/session", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    credentials: "include" // Quando chiamo /create/session, il backend ti manda un cookie di sessione. Se non metto "include", quel cookie non verrà mai salvato
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+
+                    console.log("✅ Sessione creata:", data);
+                    
+                    window.location.href = "/judge";
+
+                } else {
+                    console.error("Errore:", response.status, response.statusText);
+                }
+            } catch (error) {
+                console.error("Errore nel recupero della sessione:", error);
+            }
+        });
     }
 
     // Chiudi modale anche cliccando sull'overlay

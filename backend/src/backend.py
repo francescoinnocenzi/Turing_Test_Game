@@ -4,6 +4,7 @@ import requests, json
 from pydantic import BaseModel
 import random
 from uuid import uuid4, UUID
+import bcrypt
 
 
 from fastapi_sessions.frontends.implementations import SessionCookie, CookieParameters
@@ -17,6 +18,8 @@ from schemas.question import QuestionRequest, QuestionResponse
 from schemas.answer import AnswerRequest, AnswerResponse
 from schemas.api_models import RequestAPI, ResponseAPI
 from schemas.judgment import JudgmentRequest, JudgmentResponse
+from schemas.register import RegisterRequest, RegisterResponse
+from schemas.login import LoginRequest, LoginResponse
 from utils.emoji import remove_emoji
 
 import mariadb
@@ -70,6 +73,65 @@ cookie = SessionCookie(
     cookie_params=cookie_params,
 )
 
+@app.post("/api/register")
+def register(register_request: RegisterRequest):
+    conn = create_db_connection()
+    cur = conn.cursor()
+
+    username = register_request.username
+    email = register_request.email
+    password = register_request.password
+
+    try:
+        password = register_request.password.encode("utf-8")
+        hashed = bcrypt.hashpw(password, bcrypt.gensalt())
+
+        cur.execute("INSERT INTO users (username, password_hash, email) VALUES (%s, %s, %s)",(username, hashed.decode("utf-8"), email))
+
+        conn.commit()
+
+        return RegisterResponse(status="ok")
+
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=422, detail=f"Errore durante l'inserimento: {e}")
+
+    finally:
+        cur.close()
+        conn.close()
+
+@app.post("/api/login")
+def login(login_request: LoginRequest):
+    conn = create_db_connection()
+    cur = conn.cursor()
+
+    identifier = login_request.identifier
+    password = login_request.password
+
+    try:
+       # Cerco sia per username che per email
+        cur.execute("SELECT id, username, password_hash, email FROM users WHERE username = %s OR email = %s", (identifier, identifier))
+        user = cur.fetchone()
+
+        if user is None:
+            raise HTTPException(status_code=401, detail="Utente non trovato")
+        
+        stored_password = user[2]  # password hash
+        if not bcrypt.checkpw(password.encode("utf-8"), stored_password.encode("utf-8")):
+            raise HTTPException(status_code=401, detail="Password errata")    
+        
+        global user_id
+        user_id = user[0]  # id
+        print("Logged user_id:", user_id)
+        
+        return LoginResponse(status="ok")
+    
+    except mariadb.Error as e:
+        raise HTTPException(status_code=422, detail=f"Errore durante l'esecuzione della query: {e}")
+    
+    finally:
+        cur.close()
+        conn.close()
 
 @app.post("/questions/create", response_model=QuestionResponse)
 def create_question(request: QuestionRequest):

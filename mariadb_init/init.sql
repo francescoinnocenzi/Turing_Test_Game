@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS answers (
     session_id INT NOT NULL,
     text TEXT NOT NULL,
     author_id VARCHAR(100) NOT NULL,
-    author_type ENUM('HUMAN', 'BOT') NOT NULL,
+    author_type ENUM('HUMAN', 'BOT', 'BOT_AS_HUMAN') NOT NULL,
     room_name VARCHAR(50) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE,
@@ -43,4 +43,11 @@ CREATE TABLE IF NOT EXISTS judgments (
     judge_id INT NOT NULL,
     chosen_player_human VARCHAR(20) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,          -- ID univoco utente
+    username VARCHAR(50) NOT NULL UNIQUE,       -- username univoco
+    email VARCHAR(100) NOT NULL UNIQUE,         -- email univoca
+    password_hash VARCHAR(255) NOT NULL        -- password (hashed, es. bcrypt)
 );

@@ -23,15 +23,22 @@ async def get(request: Request):
     # Restituisce il template HTML (index.html) con la variabile "request"
     return templates.TemplateResponse("index.html", {"request": request})
 
-# Modalità multiplayer
-@app.get("/multiplayer")
-async def get_multiplayer(request: Request):
-    return templates.TemplateResponse("multiplayer.html", {"request": request})
+@app.get("/login")
+async def get_login(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+@app.get("/register")
+async def get_register(request: Request):
+    return templates.TemplateResponse("register.html", {"request": request})
 
 # Modalità singleplayer
 @app.get("/singleplayer")
 async def get_singleplayer(request: Request):
     return templates.TemplateResponse("singleplayer.html", {"request": request})
+
+@app.get("/multiplayer")
+async def get_multiplayer(request: Request):
+    return templates.TemplateResponse("multiplayer.html", {"request": request})
 
 # Modalità singleplayer - Judge
 @app.get("/single/judge")
@@ -45,11 +52,6 @@ async def get_single_human(request: Request):
     # Per ora reindirizza alla pagina player esistente
     return templates.TemplateResponse("player.html", {"request": request, "mode": "single_human"})
 
-# Modalità singleplayer - Mimic AI
-@app.get("/single/mimic")
-async def get_single_mimic(request: Request):
-    # Per ora reindirizza alla pagina player esistente
-    return templates.TemplateResponse("player.html", {"request": request, "mode": "single_mimic"})
 
 @app.get("/judge")
 async def get_judge(request: Request):
