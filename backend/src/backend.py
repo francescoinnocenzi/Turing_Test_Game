@@ -275,8 +275,17 @@ async def check_and_finalize_game(session_id: int, room_name: str, question_coun
         if mode == "single" and role == "HUMAN":
             # Fine partita - esegui giudizio
             judgment_result = await get_llm_judgment(session_id)
+
+            #Aggiusto punteggi
+            if judgment_result.get("human_result") == "HUMAN ha PERSO":
+                print("✅ GIUDICE LLM ha indovinato (Player ha perso)! ")
+                handle_scores(user_id=user_id, session_id=session_id, mode="single",role=role, win=False) 
+            elif judgment_result.get("human_result") == "HUMAN ha VINTO":
+                print("✅ GIUDICE LLM ha sbagliato (Player ha vinto)! ")
+                handle_scores(user_id=user_id, session_id=session_id, mode="single",role=role, win=True)
+            else:
+                raise HTTPException(status_code=500, detail="Errore nei punteggi del giudizio LLM")
             # Invia risultato finale
-        
             print(f"GIUDIZIO {judgment_result}")
             
             if "judgment" in judgment_result:
@@ -442,12 +451,14 @@ async def websocket_endpoint(websocket: WebSocket, room_name: str, client_id: in
                     print(f"SCELTA FRONTEND: {judge_choice}")
                     if correct_answer:
                         correct_guess = "GIUDICE ha VINTO"
-                        handle_scores(user_id, session_id,mode, win = True) #Aggiorno i punteggi nel DB
+                        handle_scores(user_id, session_id,mode,role=role, win = True) #Aggiorno i punteggi nel DB
+                        await manager.send_judgment_to_all(correct_guess, room_name)
                     else: 
                         "GIUDICE ha PERSO"
-                        handle_scores(user_id, session_id,mode, win= False) #Aggiorno i punteggi nel DB
+                        handle_scores(user_id, session_id,mode,role=role, win= False) #Aggiorno i punteggi nel DB
+                        await manager.send_judgment_to_all(correct_guess, room_name)
                     
-                    await manager.send_judgment_to_all(correct_guess, room_name)
+                   
                     
 
                 else:
@@ -709,7 +720,7 @@ def create_question_llm():
     except requests.RequestException as e:
         raise HTTPException(status_code=500, detail=f"Errore durante richiesta post {e}")
 
-# ...existing code...
+
 
 async def get_llm_judgment(session_id: int):
     """Fa decidere all'LLM chi è HUMAN e chi è BOT basandosi sulle risposte della sessione"""
@@ -815,9 +826,10 @@ async def get_llm_judgment(session_id: int):
 
         if llm_choice == 'A' and player_a_real_type == "HUMAN":
             correct_answer = True
+
         elif llm_choice == 'B' and player_b_real_type == "HUMAN":
             correct_answer = True
-        
+
         return {
             "correct_answer": correct_answer,
             "llm_choice": llm_choice,
@@ -1039,22 +1051,29 @@ async def auto_generate_next_question(room_name: str, session_id: int):
         print(f"❌ Errore in auto_generate_next_question: {e}")
 
 
-def handle_scores(user_id: int, session_id: int, mode: str, win: bool):
+def handle_scores(user_id: int, session_id: int, mode: str, role : str, win: bool):
     """Aggiorna i punteggi dei giocatori in base al risultato della partita"""
     conn = create_db_connection()
     cursor = conn.cursor()
 
     try:
         if mode== "single":
-            score = 1 if win else 0
+            if win and role == "HUMAN":
+                score = 1
+            elif win and role == "JUDGE":
+                score = 2
+            else:
+                score = 0
+            
             cursor.execute("""
-                INSERT INTO scores (user_id, session_id, score, mode)
-                VALUES (?, ?, ?, ?)
-            """, (user_id, session_id, score, "SINGLEPLAYER"))
+                INSERT INTO scores (user_id, session_id, score, mode, player_role)
+                VALUES (?, ?, ?, ?,?)
+            """, (user_id, session_id, score, "SINGLEPLAYER",role))
         else:
             raise Exception("Modalità non supportata per il calcolo punteggi")
 
         conn.commit()
+        print(f"✅ Punteggi aggiornati: User {user_id}, Session {session_id}, Score {score}, Mode {mode}")
 
     except Exception as e:
         conn.rollback()
