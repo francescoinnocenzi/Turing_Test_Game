@@ -421,9 +421,13 @@ async def websocket_endpoint(websocket: WebSocket, room_name: str, client_id: in
                         correct_answer = True 
 
                     print(f"SCELTA FRONTEND: {judge_choice}")
-
-                    correct_guess = "GIUDICE ha VINTO" if correct_answer else "GIUDICE ha PERSO"
-
+                    if correct_answer:
+                        correct_guess = "GIUDICE ha VINTO"
+                        handle_scores(user_id, session_id,mode, win = True) #Aggiorno i punteggi nel DB
+                    else: 
+                        "GIUDICE ha PERSO"
+                        handle_scores(user_id, session_id,mode, win= False) #Aggiorno i punteggi nel DB
+                    
                     await manager.send_judgment_to_all(correct_guess, room_name)
                     
 
@@ -1002,3 +1006,29 @@ async def auto_generate_next_question(room_name: str, session_id: int):
             
     except Exception as e:
         print(f"❌ Errore in auto_generate_next_question: {e}")
+
+
+def handle_scores(user_id: int, session_id: int, mode: str, win: bool):
+    """Aggiorna i punteggi dei giocatori in base al risultato della partita"""
+    conn = create_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        if mode== "single":
+            score = 1 if win else 0
+            cursor.execute("""
+                INSERT INTO scores (user_id, session_id, score, mode)
+                VALUES (?, ?, ?, ?)
+            """, (user_id, session_id, score, "SINGLEPLAYER"))
+        else:
+            raise Exception("Modalità non supportata per il calcolo punteggi")
+
+        conn.commit()
+
+    except Exception as e:
+        conn.rollback()
+        print(f"Errore nell'aggiornamento punteggi: {e}")
+    finally:
+        cursor.close()
+        conn.close()
+        
