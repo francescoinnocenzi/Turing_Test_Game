@@ -1,5 +1,12 @@
 -- Comandi SQL per creare le tabelle del database Turing Test Chat
 
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,          -- ID univoco utente
+    username VARCHAR(50) NOT NULL UNIQUE,       -- username univoco
+    email VARCHAR(100) NOT NULL UNIQUE,         -- email univoca
+    password_hash VARCHAR(255) NOT NULL        -- password (hashed, es. bcrypt)
+);
+
 -- Tabella sessions (sessioni di gioco)
 
 CREATE TABLE users (
@@ -28,6 +35,8 @@ CREATE TABLE IF NOT EXISTS questions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     session_id INT NOT NULL,
     text TEXT NOT NULL,
+    author_user_id INT NULL,
+    author_type ENUM('HUMAN', 'BOT') NOT NULL,
     room_name VARCHAR(50) NOT NULL,
     author_user_id INT NULL,  -- se HUMAN, punta a users.id
     author_type ENUM('HUMAN', 'BOT') NOT NULL,
@@ -42,8 +51,7 @@ CREATE TABLE IF NOT EXISTS answers (
     question_id INT NOT NULL,
     session_id INT NOT NULL,
     text TEXT NOT NULL,
-    room_name VARCHAR(50) NOT NULL,
-    author_user_id INT NULL,  -- se HUMAN, punta a users.id
+    author_user_id INT NULL,
     author_type ENUM('HUMAN', 'BOT', 'BOT_AS_HUMAN') NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE,
