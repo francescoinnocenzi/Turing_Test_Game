@@ -106,6 +106,18 @@
                 font-size: 1.1rem;
             }
         }
+        /* Nuovo stile per il pulsante classifica */
+    .ranking-button {
+        background: linear-gradient(135deg, #34ace0, #33d9b2);
+        color: white;
+        box-shadow: 0 8px 20px rgba(52, 172, 224, 0.3);
+    }
+
+    .ranking-button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 25px rgba(52, 172, 224, 0.4);
+    }
+
     </style>
 </head>
 <body>
@@ -130,11 +142,20 @@
                     Gioca da solo in diverse modalità
                 </div>
             </a>
+            <!-- Nuovo pulsante classifica -->
+            <a href="/ranking" id="show-ranking-btn" class="mode-button ranking-button">
+                🏆 CLASSIFICA
+                <div class="mode-description">
+                    Visualizza la classifica dei migliori giocatori
+                </div>
+            </a>
         </div>
-        
+        <!-- Container per la classifica dentro il box principale -->
+        <div id="ranking-container" style="margin-top: 2rem;"></div>
         <div class="footer">
             Seleziona una modalità per continuare
         </div>
     </div>
+
 </body>
 </html>

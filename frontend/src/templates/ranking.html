@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Turing Test Game - Classifica</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 1rem;
+            font-size: 2.5rem;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 2rem;
+            font-size: 1.2rem;
+            line-height: 1.4;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, #34ace0, #33d9b2);
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(52, 172, 224, 0.4);
+        }
+
+        .menu-btn {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+        }
+
+        .menu-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(255, 107, 107, 0.4);
+        }
+
+        .ranking-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .ranking-table th, .ranking-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .footer {
+            margin-top: 2rem;
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 2rem;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏆 Classifica</h1>
+        <div class="subtitle">
+            I migliori giocatori del Turing Test Game
+        </div>
+
+        <div class="button-group">
+            <button id="refresh-ranking" class="btn refresh-btn">🔄 Aggiorna classifica</button>
+            <a href="/index" class="btn menu-btn">🏠 Torna al menu</a>
+        </div>
+
+        <div id="ranking-container">
+            <p>Caricamento classifica...</p>
+        </div>
+
+        <div class="footer">
+            Gioca e cerca di arrivare in cima alla classifica!
+        </div>
+    </div>
+
+    <script>
+        const container = document.getElementById("ranking-container");
+        const refreshBtn = document.getElementById("refresh-ranking");
+
+        async function loadRanking() {
+            try {
+                container.innerHTML = "<p>Caricamento classifica...</p>";
+                const response = await fetch("http://localhost:8003/ranking");
+                if (!response.ok) throw new Error("Errore nel recupero della classifica");
+
+                const data = await response.json();
+                const ranking = data.ranking;
+
+                if (ranking.length === 0) {
+                    container.innerHTML = "<p>Nessuna classifica disponibile.</p>";
+                    return;
+                }
+
+                let html = `<table class="ranking-table">
+                                <tr>
+                                    <th>Posizione</th>
+                                    <th>Username</th>
+                                    <th>Punteggio</th>
+                                </tr>`;
+
+                ranking.forEach((player, index) => {
+                    html += `<tr>
+                                <td>${index + 1}</td>
+                                <td>${player.username}</td>
+                                <td>${player.total_score}</td>
+                            </tr>`;
+                });
+
+                html += `</table>`;
+                container.innerHTML = html;
+
+            } catch (error) {
+                console.error(error);
+                container.innerHTML = `<p>Errore nel caricamento della classifica</p>`;
+            }
+        }
+
+        // Carica la classifica al caricamento della pagina
+        window.onload = loadRanking;
+
+        // Ricarica la classifica al click
+        refreshBtn.addEventListener("click", loadRanking);
+    </script>
+</body>
+</html>
