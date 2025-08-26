@@ -21,6 +21,11 @@ class AskRequest(BaseModel):
 @app.get("/")
 async def get(request: Request):
     # Restituisce il template HTML (index.html) con la variabile "request"
+    return templates.TemplateResponse("login.html", {"request": request})
+
+@app.get("/index")
+async def get(request: Request):
+    # Restituisce il template HTML (index.html) con la variabile "request"
     return templates.TemplateResponse("index.html", {"request": request})
 
 @app.get("/login")

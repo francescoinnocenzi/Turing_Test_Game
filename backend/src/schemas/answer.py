@@ -6,7 +6,7 @@ class AnswerRequest(BaseModel):
     question_id: int
     session_id: int
     text: str
-    author_id: str
+    author_user_id: int | None
     author_type: str  # 'HUMAN' or 'BOT'
     room_name: str
 
@@ -15,7 +15,7 @@ class AnswerResponse(BaseModel):
     question_id: int
     session_id: int
     text: str
-    author_id: str
+    author_user_id: int | None
     author_type: str
     room_name: str
     created_at: datetime

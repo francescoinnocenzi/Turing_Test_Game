@@ -56,7 +56,8 @@ manager = ConnectionManager()
 
 # 🔹 1. Definisci SessionData
 class SessionData(BaseModel):
-    session_id: int
+    user_id: int # id user_logato
+    session_id: int | None = None
 
 # 🔹 2. Configura backend e cookie
 backend = InMemoryBackend[UUID, SessionData]()# è un dizionario che mappa: una chiave (UUID) ad un valore SessionData.
@@ -64,7 +65,13 @@ backend = InMemoryBackend[UUID, SessionData]()# è un dizionario che mappa: una 
 #   UUID("123e4567..."): SessionData(session_id=1)
 # }
 
-cookie_params = CookieParameters()
+cookie_params = CookieParameters(
+    # max_age=3600,        # durata cookie 1h
+    # path="/",
+    # same_site="none",    # 👈 necessario per cross-origin
+    # secure=False         # 👈 localhost usa http, non https
+)
+
 cookie = SessionCookie(
     cookie_name="session",
     identifier="general_verifier",
@@ -101,7 +108,7 @@ def register(register_request: RegisterRequest):
         conn.close()
 
 @app.post("/api/login")
-def login(login_request: LoginRequest):
+async def login(login_request: LoginRequest, response: Response):
     conn = create_db_connection()
     cur = conn.cursor()
 
@@ -124,6 +131,16 @@ def login(login_request: LoginRequest):
         user_id = user[0]  # id
         print("Logged user_id:", user_id)
         
+        session_uuid = uuid4()
+        data = SessionData(user_id=user_id)   # session_id ancora None
+        await backend.create(session_uuid, data)
+
+        cookie.attach_to_response(response, session_uuid)
+
+        print("👉 Creo sessione con UUID:", session_uuid)
+        print("👉 Dentro SessionData:", data.dict())
+
+
         return LoginResponse(status="ok")
     
     except mariadb.Error as e:
@@ -140,15 +157,15 @@ def create_question(request: QuestionRequest):
     
     try:
         cursor.execute("""
-            INSERT INTO questions (session_id, text, author_id, room_name) 
-            VALUES (?, ?, ?, ?)
-        """, (request.session_id, request.text, request.author_id, request.room_name,))
+            INSERT INTO questions (session_id, text, author_user_id, author_type, room_name) 
+            VALUES (?, ?, ?, ?, ?)
+        """, (request.session_id, request.text, request.author_user_id, request.author_type, request.room_name,))
         conn.commit()
 
         question_id = cursor.lastrowid
 
         cursor.execute("""
-            SELECT id, session_id, text, author_id, room_name, created_at
+            SELECT id, session_id, text, author_user_id, room_name, created_at
             FROM questions
             WHERE id = ?
         """, (question_id,))
@@ -158,7 +175,7 @@ def create_question(request: QuestionRequest):
             id=row[0], 
             session_id=row[1], 
             text=row[2],
-            author_id=row[3], 
+            author_user_id=row[3], 
             room_name=row[4], 
             created_at=row[5]
         )
@@ -177,15 +194,15 @@ def create_answer(request: AnswerRequest):
 
     try:
         cursor.execute("""
-            INSERT INTO answers (question_id, session_id, text, author_id, author_type, room_name) 
+            INSERT INTO answers (question_id, session_id, text, author_user_id, author_type, room_name) 
             values (?, ?, ?, ?, ?, ?)
-        """, (request.question_id, request.session_id, request.text, request.author_id, request.author_type, request.room_name))
+        """, (request.question_id, request.session_id, request.text, request.author_user_id, request.author_type, request.room_name))
         conn.commit()
 
         answer_id = cursor.lastrowid
 
         cursor.execute("""
-            SELECT id, question_id, session_id, text, author_id, author_type, room_name, created_at
+            SELECT id, question_id, session_id, text, author_user_id, author_type, room_name, created_at
             FROM answers
             where id = ?
         """, (answer_id, ))
@@ -197,7 +214,7 @@ def create_answer(request: AnswerRequest):
             question_id=row[1],
             session_id=row[2],
             text=row[3],
-            author_id=row[4],
+            author_user_id=row[4],
             author_type=row[5],
             room_name=row[6],
             created_at=row[7]
@@ -364,6 +381,8 @@ async def websocket_endpoint(websocket: WebSocket, room_name: str, client_id: in
         
         if stored_data:
             session_id = stored_data.session_id
+            user_id = stored_data.user_id
+
         else:
             print("Dati sessione non trovati")
             
@@ -393,10 +412,10 @@ async def websocket_endpoint(websocket: WebSocket, room_name: str, client_id: in
                 msg_type = message.get("type")
 
                 if msg_type == "question": #Gestione della domanda in arrivo
-                    await handle_question(room_name, client_id, role, message, websocket, mode, session_id=session_id)
+                    await handle_question(room_name, client_id, websocket, role, message, mode, session_id, user_id)
 
                 elif msg_type == "answer": #Gestione della riposta in arrivo
-                    await handle_answer(room_name, client_id, role, message, websocket, mode, session_id=session_id)
+                    await handle_answer(room_name, client_id, websocket, role, message, mode, session_id, user_id)
                 
                 elif msg_type == "judge_choice":
                     chosen_player_human = message.get("chosen_player_human")
@@ -437,7 +456,7 @@ async def websocket_endpoint(websocket: WebSocket, room_name: str, client_id: in
         manager.disconnect(room_name, client_id)
         await manager.broadcast(f"Client #{client_id} left {room_name}", room_name)
 #Gestione della domanda in arrivo (singleplayer)
-async def handle_question(room_name, client_id, role, message, websocket, mode, session_id):
+async def handle_question(room_name, client_id, websocket, role, message, mode, session_id, user_id):
     text = message.get("text")
     print(f"❓ Domanda dal giudice {client_id}: {text}")
 
@@ -448,8 +467,9 @@ async def handle_question(room_name, client_id, role, message, websocket, mode, 
     q_req = QuestionRequest(
         text=text,
         room_name=room_name,
-        author_id=str(client_id),
-        session_id=session_id
+        author_user_id=user_id,
+        session_id=session_id,
+        author_type="HUMAN"
     )
     saved_q = create_question(q_req)
 
@@ -465,7 +485,7 @@ async def handle_question(room_name, client_id, role, message, websocket, mode, 
         question_id=saved_q.id,
         session_id=session_id,
         text=bot1_resp,
-        author_id="bot-llm",
+        author_user_id=None,
         author_type="BOT",
         room_name=room_name
     ))
@@ -482,7 +502,7 @@ async def handle_question(room_name, client_id, role, message, websocket, mode, 
         question_id=saved_q.id,
         session_id=session_id,
         text=bot2_resp,
-        author_id="bot-retrieval",
+        author_user_id=None,
         author_type="BOT_AS_HUMAN" if bot2_data["tipo_risposta"] == "LLM" else "HUMAN",
         room_name=room_name
     ))
@@ -492,7 +512,7 @@ async def handle_question(room_name, client_id, role, message, websocket, mode, 
     await check_all_answered(saved_q.id, room_name, session_id=session_id, role="JUDGE", mode=mode)
 
 #Gestione della risposta inviata singleplayer
-async def handle_answer(room_name, client_id, role, message, websocket, mode, session_id):
+async def handle_answer(room_name, client_id, websocket, role, message, mode, session_id, user_id):
     text = message.get("text")
     question_id = message.get("question_id")
 
@@ -520,7 +540,7 @@ async def handle_answer(room_name, client_id, role, message, websocket, mode, se
             question_id=question_id,
             session_id=session_id,
             text=text,
-            author_id=str(client_id),
+            author_user_id=user_id,
             author_type=role,
             room_name=room_name
         ))
@@ -536,7 +556,8 @@ async def process_auto_question(room_name, websocket, question, session_id):
     q_req = QuestionRequest(
         text=question,
         room_name=room_name,
-        author_id="system-auto",
+        author_user_id=None,
+        author_type="BOT",
         session_id=session_id
     )
     saved_q = create_question(q_req)
@@ -552,7 +573,7 @@ async def process_auto_question(room_name, websocket, question, session_id):
         question_id=saved_q.id,
         session_id=session_id,
         text=bot_resp,
-        author_id="bot-auto",
+        author_user_id=None,
         author_type="BOT",
         room_name=room_name
     ))
@@ -562,10 +583,10 @@ async def process_auto_question(room_name, websocket, question, session_id):
 
 async def handle_raw_text(room_name, client_id, role, text, mode, session_id):
     print(f"📥 Raw text da {role}: {text}")
-    if role == "JUDGE":
-        await handle_question(room_name, client_id, role, {"text": text}, None, mode, session_id=session_id)
-    else:
-        await handle_answer(room_name, client_id, role, {"text": text}, None, mode, session_id=session_id)
+    # if role == "JUDGE":
+    #     await handle_question(room_name, client_id, role, {"text": text}, None, mode, session_id=session_id)
+    # else:
+    #     await handle_answer(room_name, client_id, role, {"text": text}, None, mode, session_id=session_id)
 
 chat_history: list[dict]= []
 
@@ -694,7 +715,7 @@ async def get_llm_judgment(session_id: int):
         cursor = conn.cursor()
         
         cursor.execute("""
-            SELECT q.text as question, a.text as answer, a.author_type, a.author_id
+            SELECT q.text as question, a.text as answer, a.author_type, a.author_user_id
             FROM questions q
             JOIN answers a ON q.id = a.question_id
             WHERE q.session_id = ? AND a.session_id = ?
@@ -713,7 +734,7 @@ async def get_llm_judgment(session_id: int):
         bot_responses = []
         
         for row in results:
-            question, answer, author_type, author_id = row
+            question, answer, author_type, author_user_id = row
             
             if author_type == "HUMAN":
                 human_responses.append(f"Q: {question}\nA: {answer}")
@@ -913,7 +934,7 @@ async def trova_simile(request: QuestionRequest):
         }
     
 @app.post("/create/session")
-async def create_session(response: Response):
+async def create_session(response: Response, session_uuid: UUID = Depends(cookie)):
     conn = create_db_connection()
     cursor = conn.cursor()
 
@@ -923,13 +944,22 @@ async def create_session(response: Response):
         conn.commit()
         db_session_id = cursor.lastrowid
 
-        # 2. Creo una sessione con UUID
-        session_uuid = uuid4()
-        data = SessionData(session_id=db_session_id)
-        await backend.create(session_uuid, data)
+        print("👉 Richiesta arrivata a /create/session")
+        print("👉 session_uuid letto dal cookie:", session_uuid)
 
-        # 3. Attacco cookie (usa UUID)
-        cookie.attach_to_response(response, session_uuid)
+        # recupero dati attuali (con user_id già dentro)
+        old_data = await backend.read(session_uuid)
+        print("👉 Dati vecchi dal backend:", old_data)
+
+        if not old_data:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        # aggiorno solo session_id, user_id rimane intatto
+        updated = old_data.model_copy(update={"session_id": db_session_id})
+        await backend.update(session_uuid, updated)
+
+        print("User ID:", updated.user_id)
+        print("Session ID:", updated.session_id)
 
         return {
             "status": "Success",
@@ -967,8 +997,9 @@ async def auto_generate_next_question(room_name: str, session_id: int):
             question_request = QuestionRequest(
                 text=next_question,
                 room_name=room_name,
-                author_id="system-auto",
-                session_id=session_id
+                author_user_id=None,
+                session_id=session_id,
+                author_type="BOT"
             )
             saved_question = create_question(question_request)
             
@@ -983,7 +1014,7 @@ async def auto_generate_next_question(room_name: str, session_id: int):
                 question_id=saved_question.id,
                 session_id=session_id,
                 text=bot_response,
-                author_id="bot-auto",
+                author_user_id=None,
                 author_type="BOT",
                 room_name=room_name
             )

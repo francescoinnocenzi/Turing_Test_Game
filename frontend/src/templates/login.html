@@ -1,112 +1,217 @@
 <!DOCTYPE html>
 <html lang="it">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Accedi</title>
-  <style>
-    :root{
-        --grad-a:#ff6b6b; --grad-b:#ee5a24;
-        --txt:#333; --muted:#6c757d; --card:#fff; --bd:#eee;
-        --ok:#28a745; --err:#dc3545;
-    }
-    *{box-sizing:border-box}
-    body{
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: linear-gradient(135deg, var(--grad-a) 0%, var(--grad-b) 100%);
-        min-height:100vh; margin:0; display:grid; place-items:center; padding:1.2rem;
-    }
-    .card{
-        width:100%; max-width:420px; background:var(--card);
-        border-radius:20px; padding:2rem; box-shadow:0 20px 40px rgba(0,0,0,.12);
-        animation: rise .5s ease;
-    }
-    h1{margin:0 0 .25rem; text-align:center; color:var(--txt)}
-    .subtitle{color:var(--muted); text-align:center; margin-bottom:1.5rem; font-size:.95rem}
-    .field{display:flex; flex-direction:column; gap:.4rem; margin-bottom:1rem}
-    label{font-weight:600; color:#444; font-size:.95rem}
-    input{
-      padding:0.9rem 1rem; border-radius:14px; border:2px solid var(--bd);
-      font-size:1rem; outline:none; transition:.2s;
-    }
-    input:focus{border-color:var(--grad-a); box-shadow:0 0 0 3px rgba(255,107,107,.18)}
-    .btn{
-        width:100%; padding:0.95rem 1rem; border:none; cursor:pointer;
-        border-radius:18px; font-weight:700; letter-spacing:.2px;
-        background:linear-gradient(135deg, var(--grad-a), var(--grad-b)); color:white;
-        box-shadow:0 10px 20px rgba(0,0,0,.12); transition:transform .1s ease;
-    }
-    .btn:active{transform:translateY(1px)}
-    .links{margin-top:1rem; text-align:center; font-size:.95rem; color:var(--muted)}
-    .links a{color:var(--grad-b); text-decoration:none; font-weight:700}
-    .msg{margin:.75rem 0; padding:.8rem 1rem; border-radius:12px; font-size:.95rem; display:none}
-    .msg.ok{background:#e9f8ee; color:#155724; border:1px solid #c7eed8}
-    .msg.err{background:#ffecec; color:#7b1c1c; border:1px solid #ffc9c9}
-    .hint{font-size:.85rem; color:#999; margin-top:.25rem}
-    @keyframes rise{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)}}
-  </style>
-</head>
-<body>
-  <main class="card">
-    <h1>🔐 Accedi</h1>
-    <p class="subtitle">Usa <strong>username</strong> <em>oppure</em> <strong>email</strong> + password.</p>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Accedi</title>
+        <style>
+            :root {
+                --grad-a: #ff6b6b;
+                --grad-b: #ee5a24;
+                --txt: #333;
+                --muted: #6c757d;
+                --card: #fff;
+                --bd: #eee;
+                --ok: #28a745;
+                --err: #dc3545;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(
+                    135deg,
+                    var(--grad-a) 0%,
+                    var(--grad-b) 100%
+                );
+                min-height: 100vh;
+                margin: 0;
+                display: grid;
+                place-items: center;
+                padding: 1.2rem;
+            }
+            .card {
+                width: 100%;
+                max-width: 420px;
+                background: var(--card);
+                border-radius: 20px;
+                padding: 2rem;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+                animation: rise 0.5s ease;
+            }
+            h1 {
+                margin: 0 0 0.25rem;
+                text-align: center;
+                color: var(--txt);
+            }
+            .subtitle {
+                color: var(--muted);
+                text-align: center;
+                margin-bottom: 1.5rem;
+                font-size: 0.95rem;
+            }
+            .field {
+                display: flex;
+                flex-direction: column;
+                gap: 0.4rem;
+                margin-bottom: 1rem;
+            }
+            label {
+                font-weight: 600;
+                color: #444;
+                font-size: 0.95rem;
+            }
+            input {
+                padding: 0.9rem 1rem;
+                border-radius: 14px;
+                border: 2px solid var(--bd);
+                font-size: 1rem;
+                outline: none;
+                transition: 0.2s;
+            }
+            input:focus {
+                border-color: var(--grad-a);
+                box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.18);
+            }
+            .btn {
+                width: 100%;
+                padding: 0.95rem 1rem;
+                border: none;
+                cursor: pointer;
+                border-radius: 18px;
+                font-weight: 700;
+                letter-spacing: 0.2px;
+                background: linear-gradient(
+                    135deg,
+                    var(--grad-a),
+                    var(--grad-b)
+                );
+                color: white;
+                box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
+                transition: transform 0.1s ease;
+            }
+            .btn:active {
+                transform: translateY(1px);
+            }
+            .links {
+                margin-top: 1rem;
+                text-align: center;
+                font-size: 0.95rem;
+                color: var(--muted);
+            }
+            .links a {
+                color: var(--grad-b);
+                text-decoration: none;
+                font-weight: 700;
+            }
+            .msg {
+                margin: 0.75rem 0;
+                padding: 0.8rem 1rem;
+                border-radius: 12px;
+                font-size: 0.95rem;
+                display: none;
+            }
+            .msg.ok {
+                background: #e9f8ee;
+                color: #155724;
+                border: 1px solid #c7eed8;
+            }
+            .msg.err {
+                background: #ffecec;
+                color: #7b1c1c;
+                border: 1px solid #ffc9c9;
+            }
+            .hint {
+                font-size: 0.85rem;
+                color: #999;
+                margin-top: 0.25rem;
+            }
+            @keyframes rise {
+                from {
+                    opacity: 0;
+                    transform: translateY(10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <main class="card">
+            <h1>🔐 Accedi</h1>
+            <p class="subtitle">
+                Usa <strong>username</strong> <em>oppure</em>
+                <strong>email</strong> + password.
+            </p>
 
-    <div id="msg" class="msg"></div>
+            <div id="msg" class="msg"></div>
 
-    <form id="loginForm">
-      <div class="field">
-        <label for="identifier">Username o Email</label>
-        <input id="identifier" name="identifier" type="text" autocomplete="username" required placeholder="es. mario.rossi o mario@email.it" />
-      </div>
-      <div class="field">
-        <label for="password">Password</label>
-        <input id="password" name="password" type="password" autocomplete="current-password" required placeholder="••••••••" />
-        <div class="hint">Non hai un account? Registrati qui sotto.</div>
-      </div>
+            <form id="loginForm">
+                <div class="field">
+                    <label for="identifier">Username o Email</label>
+                    <input id="identifier" name="identifier" type="text" autocomplete="username" required placeholder="es. mario.rossi o mario@email.it"/>
+                </div>
+                <div class="field">
+                    <label for="password">Password</label>
+                    <input id="password" name="password" type="password" autocomplete="current-password" required placeholder="••••••••"/>
+                    <div class="hint">
+                        Non hai un account? Registrati qui sotto.
+                    </div>
+                </div>
 
-      <button class="btn" type="submit">Entra</button>
-    </form>
+                <button class="btn" type="submit">Entra</button>
+            </form>
 
-    <div class="links">
-      Nessun account? <a href="/api/register">Crea un account</a>
-    </div>
-  </main>
+            <div class="links">
+                Nessun account? <a href="/api/register">Crea un account</a>
+            </div>
+        </main>
 
-  <script>
-    const form = document.getElementById('loginForm');
-    const msg = document.getElementById('msg');
+        <script>
+            const form = document.getElementById("loginForm");
+            const msg = document.getElementById("msg");
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      msg.style.display = 'none';
+            form.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                msg.style.display = "none";
 
-      const payload = {
-        identifier: form.identifier.value.trim(),
-        password: form.password.value
-      };
+                const payload = {
+                    identifier: form.identifier.value.trim(),
+                    password: form.password.value,
+                };
 
-      try {
-        const res = await fetch('http://localhost:8003/api/login', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json', 'accept':'application/json'},
-          body: JSON.stringify(payload)
-        });
+                try {
+                    const res = await fetch("http://localhost:8003/api/login", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            accept: "application/json",
+                        },
+                        credentials: "include",
+                        body: JSON.stringify(payload),
+                    });
 
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || 'Errore di accesso');
+                    const data = await res.json();
+                    if (!res.ok)
+                        throw new Error(data.detail || "Errore di accesso");
 
-        msg.className = 'msg ok';
-        msg.textContent = 'Accesso riuscito! 🎉';
-        msg.style.display = 'block';
+                    msg.className = "msg ok";
+                    msg.textContent = "Accesso riuscito! 🎉";
+                    msg.style.display = "block";
 
-        // TODO: redirect dove vuoi (dashboard/home)
-        setTimeout(()=> { window.location.href = '/'; }, 800);
-      } catch(err){
-        msg.className = 'msg err';
-        msg.textContent = err.message || 'Errore imprevisto';
-        msg.style.display = 'block';
-      }
-    });
-  </script>
-</body>
+                    // TODO: redirect dove vuoi (dashboard/home)
+                    setTimeout(() => {
+                        window.location.href = "/index";
+                    }, 800);
+                } catch (err) {
+                    msg.className = "msg err";
+                    msg.textContent = err.message || "Errore imprevisto";
+                    msg.style.display = "block";
+                }
+            });
+        </script>
+    </body>
 </html>
