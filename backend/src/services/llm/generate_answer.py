@@ -7,7 +7,7 @@ from schemas.question import QuestionRequest
 from database.connection import create_db_connection
 from fastapi import HTTPException
 import mariadb
-from services.transformer import get_model
+from services.llm.transformer import get_model
 import torch
 from sentence_transformers import util
 

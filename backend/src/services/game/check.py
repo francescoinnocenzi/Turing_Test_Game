@@ -2,7 +2,7 @@ from fastapi import HTTPException
 from services.llm.generate_judgment import get_llm_judgment
 from services.llm.generate_question import auto_generate_next_question
 from services.game.scores import handle_scores
-from services.manager import manager
+from services.instances.manager import manager
 from database.connection import create_db_connection
 from services.state import user_id
 
@@ -82,5 +82,5 @@ async def check_and_finalize_game(session_id: int, room_name: str, question_coun
             else:
                 print(f"Errore nel giudizio: {judgment_result.get('error', 'Errore sconosciuto')}")
         
-        if mode == "single" and role == "JUDGE":
+        if (mode == "single" or mode == "multi") and role == "JUDGE":
             await manager.send_message_to_all("Scegli chi è UMANO", "time_to_judge", room_name)

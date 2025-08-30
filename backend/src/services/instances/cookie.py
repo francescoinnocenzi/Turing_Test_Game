@@ -1,7 +1,9 @@
 
 from fastapi_sessions.frontends.implementations import SessionCookie, CookieParameters
 
-cookie_params = CookieParameters()
+cookie_params = CookieParameters(
+    max_age=3600,  # durata del cookie in secondi (1 ora)
+)
 
 cookie = SessionCookie(
     cookie_name="session",

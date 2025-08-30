@@ -1,16 +1,16 @@
 from schemas.question import QuestionRequest
 from schemas.answer import AnswerRequest
-from services.questions import create_question
-from services.answers import create_answer
-import json
+from services.game.questions import create_question
+from services.game.answers import create_answer
 from services.llm.generate_answer import get_llm_response
 from services.llm.generate_answer import trova_simile
-from services.manager import manager
+from services.instances.manager import manager
 from services.game.check import check_all_answered
 
 #Gestione della domanda in arrivo (singleplayer)
 async def handle_question(room_name, client_id, websocket, role, message, mode, session_id, user_id):
     text = message.get("text")
+
     print(f"❓ Domanda dal giudice {client_id}: {text}")
     
     # Salva domanda
@@ -23,10 +23,6 @@ async def handle_question(room_name, client_id, websocket, role, message, mode, 
     )
     saved_q = create_question(q_req)
 
-    await websocket.send_text(json.dumps({
-        "type": "question_saved",
-        "question_id": saved_q.id
-    }))
     # Invia domanda a players (caso multiplayer)
     await manager.send_question_to_players(text, room_name, saved_q.id)
     print(f"Question sent to players in room {room_name}")
@@ -76,21 +72,6 @@ async def handle_answer(room_name, client_id, websocket, role, message, mode, se
     print(f" Risposta da {role} (client {client_id}): {text} mode : {mode}")
 
     await manager.send_answer_to_judge(text, room_name, player_number)
-
-    # in realtà id lo recupera qua come quello più recente non vabbene
-    # if not question_id:
-    #     conn = create_db_connection()
-    #     cur = conn.cursor()
-    #     cur.execute("""
-    #         SELECT id FROM questions 
-    #         WHERE room_name = ? 
-    #         ORDER BY created_at DESC 
-    #         LIMIT 1
-    #     """, (room_name,))
-    #     last_q = cur.fetchone()
-    #     cur.close(); conn.close()
-    #     if last_q:
-    #         question_id = last_q[0]
 
     if question_id:
         create_answer(AnswerRequest(

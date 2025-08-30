@@ -1,13 +1,13 @@
 from schemas.question import QuestionRequest, QuestionResponse
 from schemas.answer import AnswerRequest
-from services.transformer import get_model
+from services.llm.transformer import get_model
 from database.connection import create_db_connection
 import json
 import mariadb
 from fastapi import HTTPException
-from services.answers import create_answer
+from services.game.answers import create_answer
 from services.llm.generate_answer import get_llm_response
-from services.manager import manager
+from services.instances.manager import manager
 
 
 def create_question(request: QuestionRequest):
@@ -74,12 +74,6 @@ async def process_auto_question(room_name, websocket, question, session_id):
 
      #Ivia domanda ai player (Uno è il giocatore l'altro è il bot)
     await manager.send_question_to_players(question, room_name, saved_q.id)
-
-
-    await websocket.send_text(json.dumps({
-        "type": "question_saved",
-        "question_id": saved_q.id
-    }))
 
     #Risposta del bot alla domanda del ULLM
     bot_resp = await get_llm_response(question)

@@ -1,6 +1,4 @@
-from sentence_transformers import SentenceTransformer, util
-import torch
-
+from sentence_transformers import SentenceTransformer
 model = None
 
 def get_model():

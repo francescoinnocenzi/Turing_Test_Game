@@ -1,6 +1,6 @@
 from fastapi import WebSocket
 from fastapi_sessions.frontends.implementations import SessionCookie, CookieParameters
-from websocket import ConnectionManager
+from services.websocket.websocket import ConnectionManager
 import json
 from fastapi import WebSocket
 from fastapi_sessions.backends.implementations import InMemoryBackend
@@ -9,14 +9,14 @@ from schemas.session_data import SessionData
 from schemas.judgment import JudgmentRequest
 from services.game.handle import handle_question, handle_answer
 from services.llm.generate_question import auto_generate_next_question
-from services.judgment import submit_judgment
+from services.game.judgment import submit_judgment
 from services.game.scores import handle_scores
 from fastapi import WebSocketDisconnect
 from services.game.handle import handle_raw_text
-from services.session_backend import backend
+from services.instances.session_backend import backend
 
 
-async def websocket_endpoint(websocket: WebSocket, room_name: str, client_id: int, cookie: CookieParameters, backend: InMemoryBackend[UUID, SessionData], manager: ConnectionManager):
+async def ws_entrypoint(websocket: WebSocket, room_name: str, client_id: int, cookie: CookieParameters, backend: InMemoryBackend[UUID, SessionData], manager: ConnectionManager):
     #Prendo parametri dalla query string
     role = websocket.query_params.get("role", "SPECTATOR").upper()
     mode = websocket.query_params.get("mode", "single").lower()

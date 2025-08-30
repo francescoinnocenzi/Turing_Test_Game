@@ -5,10 +5,6 @@ from fastapi_sessions.frontends.implementations import SessionCookie, CookiePara
 from fastapi_sessions.backends.implementations import InMemoryBackend
 from fastapi_sessions.session_verifier import SessionVerifier
 
-
-from websocket import ConnectionManager
-from database.connection import create_db_connection
-
 from schemas.question import QuestionRequest, QuestionResponse
 from schemas.answer import AnswerRequest, AnswerResponse
 from schemas.api_models import RequestAPI, ResponseAPI
@@ -17,21 +13,20 @@ from schemas.register import RegisterRequest, RegisterResponse
 from schemas.login import LoginRequest, LoginResponse
 from schemas.session_data import SessionData
 
-from services.questions import create_question
-from services.answers import create_answer
+from services.game.questions import create_question
+from services.game.answers import create_answer
 from services.auth.login import login
-from services.judgment import submit_judgment
+from services.game.judgment import submit_judgment
 from services.auth.register import register
-from services.websocket_endpoint import websocket_endpoint
-from services.transformer import get_model
+from services.websocket.ws_entrypoint import ws_entrypoint
 from services.llm.generate_answer import trova_simile
 from services.llm.generate_question import create_question_llm
 from services.llm.generate_answer import ask_with_memory
 from services.game.session import create_session, join_session, available_sessions
 from services.game.ranking import get_ranking
-from services.session_backend import backend
-from services.cookie import cookie
-from services.manager import manager
+from services.instances.session_backend import backend
+from services.instances.cookie import cookie
+from services.instances.manager import manager
 
 import mariadb
 from pydantic import BaseModel
@@ -93,7 +88,7 @@ def handle_judgment(request: JudgmentRequest):
 # Endpoint WebSocket per gestire la comunicazione in tempo reale
 @app.websocket("/ws/{room_name}/{client_id}")
 async def handle_websocket_endpoint(websocket: WebSocket, room_name: str, client_id: int):
-    return await websocket_endpoint(websocket, room_name, client_id, cookie, backend, manager)
+    return await ws_entrypoint(websocket, room_name, client_id, cookie, backend, manager)
 
 @app.post("/ask")
 def handle_ask_with_memory():

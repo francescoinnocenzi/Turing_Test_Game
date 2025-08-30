@@ -46,7 +46,7 @@ async def get_llm_judgment(session_id: int):
             (bot_responses, "BOT")  
         ]
         random.shuffle(players_data)
-        
+
         # Ora assegna in modo chiaro
         player_a_responses, player_a_real_type = players_data[0]
         player_b_responses, player_b_real_type = players_data[1]

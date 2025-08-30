@@ -12,6 +12,10 @@ Fra
 - Quando finisce la partita blocca input / bottoni per dare giudizio A o B
 - Judge input bloccato quando sta da solo
 - Alcuni pydantic sono inutili levali, spesso quelli di reponse
+- In judeg mutiplyaer non mi stampa le domande
+- Pydantic ouput tipo trova_simile
+- Non conviene controllare in trova_simile prima se ci sono ripsoste umane relative alla domanda, prima di trovare bestcore
+- backend-1       | Risposte ricevute: 2/2 (Human: 0, Bot: 1) perché human 0
 
 Luca
 - Modalità SINGLE HUMAN in cui le domande le prendi dalle sessioni passate e le riposte BOT pure

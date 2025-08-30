@@ -1,8 +1,8 @@
 from schemas.question import QuestionRequest
 from schemas.answer import AnswerRequest
-from services.answers import create_answer
-from services.questions import create_question
-from services.manager import manager
+from services.game.answers import create_answer
+from services.game.questions import create_question
+from services.instances.manager import manager
 from fastapi import HTTPException
 import requests
 import random

@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi_sessions.frontends.implementations import SessionCookie, CookieParameters
 from schemas.session_data import SessionData
 from fastapi_sessions.backends.implementations import InMemoryBackend
-from services.cookie import cookie
+from services.instances.cookie import cookie
 import mariadb
 
 async def create_session(response: Response, backend: InMemoryBackend[UUID, SessionData], session_uuid: UUID):

@@ -5,7 +5,7 @@ from fastapi import HTTPException
 from fastapi import Response
 import bcrypt
 import mariadb
-from services.session_backend import backend
+from services.instances.session_backend import backend
 from uuid import uuid4
 from fastapi_sessions.frontends.implementations import SessionCookie, CookieParameters
 import services.state as state
