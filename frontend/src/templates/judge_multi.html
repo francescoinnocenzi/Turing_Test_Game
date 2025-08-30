@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Multiplayer - JUDGE</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            color: #333;
+            margin-bottom: 1rem;
+        }
+        .status-info {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 1rem;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            font-weight: bold;
+        }
+        .question-form {
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+        }
+        .question-form input {
+            flex: 1;
+            padding: 1rem;
+            border-radius: 25px;
+            border: 2px solid #eee;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background-color: #fff;
+            color: #333;
+            outline: none;
+        }
+        /* Stato ABILITATO (focus) */
+        .question-form input:focus {
+            border-color: #ff6b6b;
+            box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.2);
+            background-color: #fff;
+        }
+        /* Stato DISABILITATO */
+        .question-form input:disabled {
+            background-color: #f8f9fa;
+            border-color: #d1d3d4;
+            color: #6c757d;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        /* Placeholder quando disabilitato */
+        .question-form input:disabled::placeholder {
+            color: #adb5bd;
+            opacity: 1;
+        }
+        .send-button {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            opacity: 1;
+        }
+        /* Bottone DISABILITATO */
+        .send-button:disabled {
+            background: #d1d3d4 !important;
+            cursor: not-allowed;
+            opacity: 0.6;
+            transform: none;
+        }
+        /* Rimuovi effetti hover quando disabilitato */
+        .send-button:disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+        /* Feedback di attesa */
+        .question-form {
+            position: relative;
+        }
+
+        .dual-chat {
+            display: flex;
+            gap: 2rem;
+        }
+        .chat-box {
+            flex: 1;
+            border: 2px solid #eee;
+            border-radius: 15px;
+            padding: 1rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .chat-box h3 {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            background: #f8f9fa;
+            margin-bottom: 0.8rem;
+            padding: 0.8rem;
+            border-radius: 10px;
+        }
+        .playerA { border-left: 4px solid #28a745; }
+        .playerB { border-left: 4px solid #dc3545; }
+
+        /* Nuovo: stile per la domanda mostrata sopra le risposte */
+        .question-item {
+            background: linear-gradient(90deg,#fff7e6,#fff1cc);
+            border: 2px dashed #f0ad4e;
+            color: #663c00;
+            font-weight: 700;
+            text-align: center;
+            padding: 0.8rem;
+            margin: 0.6rem 0;
+            border-radius: 12px;
+        }
+
+        /* Notifica e separatore */
+        .notification {
+            margin-top: 1rem;
+            padding: 0.6rem 1rem;
+            background: rgba(0,0,0,0.06);
+            border-radius: 8px;
+            text-align: center;
+        }
+        .round-separator {
+            height: 8px;
+            border-radius: 999px;
+            background: linear-gradient(90deg,#e9ecef,#f8f9fa);
+            margin: 0.5rem 0 1rem 0;
+        }
+
+        /* Form di giudizio */
+        .judgment-form {
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            border: 2px solid #eee;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #fff, #fdf2f2);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            text-align: center;
+            animation: fadeIn 0.6s ease;
+        }
+
+        /* Contenitore radio in orizzontale */
+        .judgment-options {
+            display: flex;
+            justify-content: center;
+            gap: 2rem; /* spazio tra Player A e Player B */
+            margin: 1rem 0;
+        }
+
+        .judgment-form h3 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+
+        .judgment-form label {
+            display: flex;
+            align-items: center;
+            font-size: 1.1rem;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 0.6rem 1rem;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+
+        /* Radio */
+        .judgment-form input[type="radio"] {
+            margin-right: 0.5rem;
+            accent-color: #ff6b6b;
+        }
+
+        /* Hover */
+        .judgment-form label:hover {
+            background: rgba(255, 107, 107, 0.08);
+            transform: scale(1.02);
+        }
+
+        /* Opzione selezionata */
+        .judgment-form input[type="radio"]:checked + span {
+            font-weight: bold;
+            color: #ee5a24;
+        }
+
+        /* Bottone di conferma */
+        .confirm-button {
+            margin-top: 1rem;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.8rem;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+        }
+
+        .confirm-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+        }
+
+        /* Animazione di entrata */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Modale per il risultato finale */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            animation: slideInUp 0.4s ease;
+        }
+        
+        .result-win .modal-content {
+            background: linear-gradient(135deg, #00b894, #00a085);
+            color: white;
+        }
+        
+        .result-lose .modal-content {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+        
+        .result-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+        
+        .result-title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+        
+        .result-message {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+        
+        .result-details {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            font-size: 1rem;
+        }
+        
+        .close-button {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .close-button:hover {
+            background: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="mainContainer">
+  <h1>🎮 JUDGE</h1>
+
+  <div class="status-info" id="statusInfo">
+    🏠 Room: <span id="room-id">
+  </div>
+
+  <div class="question-form">
+    <input type="text" id="questionInput" placeholder="✍️ Scrivi una domanda..." />
+    <button class="send-button" onclick="sendQuestion()">📤 Invia</button>
+  </div>
+
+  <div id="judgmentContainer"></div>
+
+  <div class="dual-chat">
+    <div class="chat-box">
+      <h3>🟢 Risposte Player A</h3>
+      <ul id="messagesA"></ul>
+    </div>
+    <div class="chat-box">
+      <h3>🔴 Risposte Player B</h3>
+      <ul id="messagesB"></ul>
+    </div>
+  </div>
+</div>
+
+<script>
+let ws = null;
+let clientId = Math.floor(Math.random()*100000);
+let role = 'JUDGE';
+let roomName = getRoomNameFromUrl();
+let pendingAnswers = [];
+
+document.getElementById("room-id").textContent = roomName || "Nessuna";
+// document.getElementById("ws-id").textContent = clientId;
+
+// Connetti WebSocket solo se ho una room valida
+if(roomName){
+  const url = `ws://localhost:8003/ws/${roomName}/${clientId}?role=${role}&mode=multi`;
+  ws = new WebSocket(url);
+
+  ws.onopen = () => console.log(`✅ Connesso come ${role} nella stanza ${roomName}`);
+
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+
+    if(data.type === "player_answer"){
+      pendingAnswers.push(data);
+    }
+    else if(data.type === "time_to_judge"){
+      document.getElementById("judgmentContainer").innerHTML = `
+        <div class="judgment-form">
+          <h3>⚖️ Chi pensi sia UMANO?</h3>
+          <div class="judgment-options">
+            <label><input type="radio" name="chosen_player" value="A"><span>Player A</span></label>
+            <label><input type="radio" name="chosen_player" value="B"><span>Player B</span></label>
+          </div>
+          <button class="confirm-button" onclick="submitJudgment()">Conferma scelta</button>
+        </div>`;
+    }
+    else if(data.type === "all_answered"){
+      pendingAnswers.forEach(ans => {
+        const li = document.createElement("li");
+        li.textContent = ans.text;
+        li.className = ans.player === 1 ? "playerA" : "playerB";
+        document.getElementById(ans.player === 1 ? "messagesA" : "messagesB").appendChild(li);
+      });
+      document.getElementById("questionInput").disabled = false;
+      document.querySelector(".send-button").disabled = false;
+      document.getElementById("questionInput").placeholder = '✍️ Scrivi una domanda...';
+      pendingAnswers = [];
+      scrollChats();
+    }
+    else if(data.type === "final_judgment"){
+      alert("Gioco terminato: " + data.judgment);
+    }
+  };
+}
+
+function sendQuestion(){
+  const input = document.getElementById("questionInput");
+  const sendBtn = document.querySelector('.send-button');
+  const text = input.value.trim();
+  if(!text) return;
+  ws.send(JSON.stringify({type:"question", text:text}));
+  input.value = "";
+  input.disabled = true;
+  sendBtn.disabled = true;
+  input.placeholder = 'In attesa delle risposte...';
+  document.querySelector(".send-button").disabled = true;
+}
+
+function submitJudgment(){
+  const selected = document.querySelector('input[name="chosen_player"]:checked');
+  if(!selected) return alert("Seleziona un giocatore!");
+  ws.send(JSON.stringify({type:"judge_choice", chosen_player_human:selected.value}));
+}
+
+document.getElementById("questionInput").addEventListener("keydown", function(event) {
+  if (event.key === "Enter") {
+    event.preventDefault(); // evita che faccia refresh
+    sendQuestion();
+  }
+});
+
+function scrollChats(){
+  document.querySelectorAll('.chat-box').forEach(box => box.scrollTop = box.scrollHeight);
+}
+
+// Recupera la stanza dall’URL ?room=...
+function getRoomNameFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("room");
+}
+</script>
+</body>
+</html>

@@ -222,6 +222,18 @@
             font-size: 1rem;
         }
 
+        .confirm-button:disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        .confirm-button:disabled {
+            background: #d1d3d4 !important;
+            cursor: not-allowed;
+            opacity: 0.6;
+            transform: none;
+        }
+
         .confirm-button:hover {
             transform: scale(1.05);
             box-shadow: 0 6px 16px rgba(0,0,0,0.15);
@@ -335,7 +347,7 @@
         <h1>👨‍⚖️ Giudice - Domande & Risposte</h1>
         
         <div class="status-info">
-            🆔 ID: <span id="ws-id"></span> | 
+            <!-- 🆔 ID: <span id="ws-id"></span> |  -->
             🏠 Room: <span id="room-id">Nessuna</span>
         </div>
 
@@ -542,8 +554,8 @@
     }
 
     function submitJudgment() {
-        const selected = document.querySelector('input[name="chosen_player"]:checked');
-        if (!selected) {
+        const chosen = document.querySelector('input[name="chosen_player"]:checked');
+        if (!chosen) {
             alert("Seleziona un giocatore prima di confermare!");
             return;
         }
@@ -551,8 +563,25 @@
         // Invia solo la scelta al backend via WebSocket
         ws.send(JSON.stringify({
             type: "judge_choice",
-            chosen_player_human: selected.value
+            chosen_player_human: chosen.value
         }));
+
+        // Blocca ulteriori modifiche
+        document.querySelectorAll('input[name="chosen_player"]').forEach(radio => {
+            radio.disabled = true;
+        });
+
+        // Disabilita visivamente il player NON scelto
+        if (chosen === "A") {
+            document.querySelector("#messagesB").style.opacity = "0.5";
+            document.querySelector("#messagesB").style.pointerEvents = "none";
+        } else {
+            document.querySelector("#messagesA").style.opacity = "0.5";
+            document.querySelector("#messagesA").style.pointerEvents = "none";
+        }
+
+        // Disabilita anche il bottone per evitare doppi invii
+        document.querySelector(".confirm-button").disabled = true;
     }
 
     function showResultModal(result) {

@@ -65,12 +65,13 @@ class ConnectionManager:
         for client_data in self.rooms.get(room_name, {}).values():  # CORRETTO
             await client_data["ws"].send_text(broadcast_message)
 
-    async def send_question_to_players(self, question: str, room_name: str):
+    async def send_question_to_players(self, question: str, room_name: str, question_id: int):
         """Invia una domanda dal giudice a tutti i player nella stanza"""
         room = self.rooms.get(room_name, {})
         message = json.dumps({
             "type": "question", 
-            "text": question
+            "text": question,
+            "question_id": question_id
         })
         
         print(f"SENDING QUESTION '{question}' to players in room {room_name}")

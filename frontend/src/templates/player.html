@@ -386,7 +386,7 @@
         <h1>👤 WebSocket Chat - Partecipante</h1>
         
         <div class="status-info">
-            <span class="emoji">🆔</span>Your ID: <span id="ws-id"></span> | 
+            <!-- <span class="emoji">🆔</span>Your ID: <span id="ws-id"></span> |  -->
             <span class="emoji">🏠</span>Room: <span id="room-id">Seleziona una stanza</span>
         </div>
         
@@ -501,7 +501,7 @@
 
         if (ws && ws.readyState === WebSocket.OPEN) {
             currentAnswer = text;
-            const message = { type: "answer", text: currentAnswer };
+            const message = { type: "answer", text: currentAnswer};
             if (currentQuestionId) {
                 message.question_id = currentQuestionId;
             }
@@ -537,9 +537,11 @@
                 const sendBtn = document.querySelector('.send-button');
                 sendBtn.disabled = false;
 
-                if (msg.id) {
-                    currentQuestionId = msg.id;
+                if (msg.question_id) {
+                    currentQuestionId = msg.question_id;
                 }
+
+                console.log(currentQuestionId);
 
                 setTimeout(() => {
                     questionDiv.className = "current-question";

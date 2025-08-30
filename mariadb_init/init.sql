@@ -12,7 +12,8 @@ CREATE TABLE users (
 CREATE TABLE IF NOT EXISTS sessions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     room_name VARCHAR(50) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_available BOOLEAN NOT NULL DEFAULT TRUE
     );
     -- user_id int NOT NULL,
     -- FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -31,6 +32,7 @@ CREATE TABLE IF NOT EXISTS questions (
     room_name VARCHAR(50) NOT NULL,
     author_user_id INT NULL,  -- se HUMAN, punta a users.id
     author_type ENUM('HUMAN', 'BOT') NOT NULL,
+    embedding JSON NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE,
     FOREIGN KEY (author_user_id) REFERENCES users(id) ON DELETE CASCADE

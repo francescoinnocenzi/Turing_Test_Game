@@ -71,3 +71,9 @@ async def get_player(request: Request):
 async def get_ranking(request: Request):
     # Restituisce il template HTML (ranking.html) con la variabile "request"
     return templates.TemplateResponse("ranking.html", {"request": request})
+@app.get("/judge_multi")
+async def get_judge_multi(request: Request):
+    return templates.TemplateResponse("judge_multi.html", {"request": request})
+@app.get("/player_multi")
+async def get_player_multi(request: Request):
+    return templates.TemplateResponse("player_multi.html", {"request": request})    
