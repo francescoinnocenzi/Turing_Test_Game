@@ -16,7 +16,7 @@ from schemas.session_data import SessionData
 from services.game.questions import create_question
 from services.game.answers import create_answer
 from services.auth.login import login
-from services.game.judgment import submit_judgment
+from services.game.judgment import create_judgment
 from services.auth.register import register
 from services.websocket.ws_entrypoint import ws_entrypoint
 from services.llm.generate_answer import trova_simile
@@ -83,7 +83,7 @@ def generate_answer(request: AnswerRequest):
 
 @app.post("/create/judgment", response_model=JudgmentResponse)
 def handle_judgment(request: JudgmentRequest):
-    return submit_judgment(request)
+    return create_judgment(request)
     
 # Endpoint WebSocket per gestire la comunicazione in tempo reale
 @app.websocket("/ws/{room_name}/{client_id}")

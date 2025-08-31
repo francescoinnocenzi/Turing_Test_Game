@@ -1,7 +1,10 @@
 from schemas.question import QuestionRequest
 from schemas.answer import AnswerRequest
+from schemas.judgment import JudgmentRequest
 from services.game.questions import create_question
 from services.game.answers import create_answer
+from services.game.judgment import create_judgment
+from services.game.scores import handle_scores
 from services.llm.generate_answer import get_llm_response
 from services.llm.generate_answer import trova_simile
 from services.instances.manager import manager
@@ -92,3 +95,50 @@ async def handle_raw_text(room_name, client_id, role, text, mode, session_id):
         await handle_question(room_name, client_id, role, {"text": text}, None, mode, session_id=session_id)
     else:
         await handle_answer(room_name, client_id, role, {"text": text}, None, mode, session_id=session_id)
+
+async def handle_message(msg_type, room_name, client_id, websocket, role, message, mode, session_id, user_id, manager):
+    handlers = {
+        "question": handle_question,
+        "answer": handle_answer,
+        "judge_choice": handle_judgment,
+    }
+
+    if msg_type in handlers:
+        handler = handlers[msg_type]
+        if msg_type == "judge_choice":
+            await handler(room_name, message, session_id, user_id, manager, role, mode)
+        else:
+            await handler(room_name, client_id, websocket, role, message, mode, session_id, user_id)
+    else:
+        print(f"⚠️ Messaggio sconosciuto: {msg_type}")
+
+async def handle_judgment(room_name, message, session_id, user_id, manager, role, mode):
+    chosen_player_human = message.get("chosen_player_human")
+
+    judgment_req = JudgmentRequest(
+        session_id=session_id,
+        judge_id=user_id,
+        chosen_player_human=chosen_player_human
+    )
+
+    result_judgment = create_judgment(judgment_req)
+    judge_choice = result_judgment.chosen_player_human
+    
+    player_a_real_type = "HUMAN"
+    player_b_real_type = "BOT"
+
+    correct_answer = (
+        (judge_choice == "A" and player_a_real_type == "HUMAN") or
+        (judge_choice == "B" and player_b_real_type == "HUMAN")
+    )
+
+    if correct_answer:
+        correct_guess = "GIUDICE ha VINTO"
+        handle_scores(user_id, session_id, mode, role=role, win=True)
+    else:
+        correct_guess = "GIUDICE ha PERSO"
+        handle_scores(user_id, session_id, mode, role=role, win=False)
+
+    await manager.send_judgment_to_all(correct_guess, room_name)
+
+

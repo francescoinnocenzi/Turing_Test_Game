@@ -7,15 +7,16 @@ from fastapi_sessions.backends.implementations import InMemoryBackend
 from uuid import UUID
 from schemas.session_data import SessionData
 from schemas.judgment import JudgmentRequest
-from services.game.handle import handle_question, handle_answer
+from services.game.handle import handle_question, handle_answer, handle_message
 from services.llm.generate_question import auto_generate_next_question
-from services.game.judgment import submit_judgment
+from services.game.judgment import create_judgment
 from services.game.scores import handle_scores
+from services.game.session import setup_session
 from fastapi import WebSocketDisconnect
 from services.game.handle import handle_raw_text
 from services.instances.session_backend import backend
 
-
+'''
 async def ws_entrypoint(websocket: WebSocket, room_name: str, client_id: int, cookie: CookieParameters, backend: InMemoryBackend[UUID, SessionData], manager: ConnectionManager):
     #Prendo parametri dalla query string
     role = websocket.query_params.get("role", "SPECTATOR").upper()
@@ -82,7 +83,7 @@ async def ws_entrypoint(websocket: WebSocket, room_name: str, client_id: int, co
                             chosen_player_human=chosen_player_human
                         )
 
-                        result_judgment = submit_judgment(judgment_req)
+                        result_judgment = create_judgment(judgment_req)
                         judge_choice = result_judgment.chosen_player_human
                         
                         player_a_real_type = "HUMAN"
@@ -122,7 +123,7 @@ async def ws_entrypoint(websocket: WebSocket, room_name: str, client_id: int, co
                             chosen_player_human=chosen_player_human
                         )
 
-                        result_judgment = submit_judgment(judgment_req)
+                        result_judgment = create_judgment(judgment_req)
                         judge_choice = result_judgment.chosen_player_human
                         
                         player_a_real_type = "HUMAN"
@@ -149,6 +150,37 @@ async def ws_entrypoint(websocket: WebSocket, room_name: str, client_id: int, co
                 else:
                     print(f"⚠️ Messaggio sconosciuto: {msg_type}") 
 
+            except json.JSONDecodeError:
+                await handle_raw_text(room_name, client_id, role, data, mode, session_id=session_id)
+
+    except WebSocketDisconnect:
+        manager.disconnect(room_name, client_id)
+        await manager.broadcast(f"Client #{client_id} left {room_name}", room_name)
+'''
+async def ws_entrypoint(websocket: WebSocket, room_name: str, client_id: int, cookie: CookieParameters, backend: InMemoryBackend[UUID, SessionData], manager: ConnectionManager):
+    role = websocket.query_params.get("role", "SPECTATOR").upper()
+    mode = websocket.query_params.get("mode", "single").lower()
+
+    print(f"🍪 Tutti i cookie disponibili: {websocket.cookies}")
+    session_id, user_id = await setup_session(websocket, cookie, backend)
+    print(f"SESSION_ID FINALE: {session_id}")
+
+    await manager.connect(room_name, websocket, client_id, role)
+    print(f"✅ Nuovo client {client_id} connesso come {role} in modalità {mode}")
+
+    if role == "HUMAN" and mode == "single":
+        question = await auto_generate_next_question(room_name, session_id)
+
+    try:
+        while True:
+            data = await websocket.receive_text()
+            ws = manager.rooms[room_name][client_id]
+            role = ws["role"]
+
+            try:
+                message = json.loads(data)
+                msg_type = message.get("type")
+                await handle_message(msg_type, room_name, client_id, websocket, role, message, mode, session_id, user_id, manager)
             except json.JSONDecodeError:
                 await handle_raw_text(room_name, client_id, role, data, mode, session_id=session_id)
 

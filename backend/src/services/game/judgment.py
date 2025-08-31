@@ -4,7 +4,7 @@ from fastapi import HTTPException
 import mariadb
 
 
-def submit_judgment(request: JudgmentRequest):
+def create_judgment(request: JudgmentRequest):
     conn = create_db_connection()
     cursor = conn.cursor()
 
