@@ -10,8 +10,9 @@ import mariadb
 from services.llm.transformer import get_model
 import torch
 from sentence_transformers import util
+import services.state as state
 
-chat_history: list[dict]= []
+state.chat_history = [] # list[dict]
 
 # Funzione per ottenere risposta dal LLM
 async def get_llm_response(question: str):
@@ -26,9 +27,7 @@ async def get_llm_response(question: str):
 
 def ask_with_memory(request: RequestAPI):
 
-    global chat_history
-
-    chat_history.append({"role": "user", "content": request.question})
+    state.chat_history.append({"role": "user", "content": request.question})
 
     url = "http://ollama:11434/api/chat"
 
@@ -40,7 +39,7 @@ def ask_with_memory(request: RequestAPI):
     }
 
     # Mettendo il system prompt all'inizio, il modello LLM lo considera come una direttiva ad alta priorità che deve guidare tutte le sue risposte.
-    messages: list = [system_prompt] + chat_history  # prepend il system
+    messages: list = [system_prompt] + state.chat_history  # prepend il system
 
     payload = {
         "model": "gemma2:2b-instruct-q2_K", #Versione ottimizzata di gemma2:2b-instruct-q2_K
@@ -59,11 +58,11 @@ def ask_with_memory(request: RequestAPI):
         answer = risposta_api["message"]["content"]
         answer = remove_emoji(answer)
         
-        chat_history.append({"role": "assistant", "content": answer})
+        state.chat_history.append({"role": "assistant", "content": answer})
 
-        print(chat_history)
+        print(state.chat_history)
 
-        return ResponseAPI(answer=answer, chat_history=chat_history)
+        return ResponseAPI(answer=answer, chat_history=state.chat_history)
         
     except requests.RequestException as e:
         raise HTTPException(status_code=500, detail=f"Errore durante richiesta post {e}")

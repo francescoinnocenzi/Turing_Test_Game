@@ -197,7 +197,8 @@
                     console.log("✅ Sessione creata:", data);
                     console.log("🔄 Ora vado a /judge...");
                     
-                    window.location.href = "/judge";
+                    // 👉 Passo il room_name come query param
+                    window.location.href = "/judge?room=" + encodeURIComponent(data.room_name);
 
                 } else {
                     console.error("Errore:", response.status, response.statusText);
@@ -226,7 +227,7 @@
                     console.log("✅ Sessione creata:", data);
                     console.log("🔄 Ora vado a /player...");
 
-                    window.location.href = "/player";
+                    window.location.href = "/player?room=" + encodeURIComponent(data.room_name);
                 } else {
                     console.error("Errore:", response.status, response.statusText);
                 }

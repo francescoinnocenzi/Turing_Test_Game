@@ -385,8 +385,8 @@
         }
     })
 
-    function setupWebSocket(roomName="room1") {
-        const url = `ws://localhost:8003/ws/${roomName}/${clientId}?role=JUDGE`;
+    function setupWebSocket(roomName) {
+        const url = `ws://localhost:8003/ws/${roomName}/${clientId}?role=JUDGE&mode=single`;
         console.log("🔌 Connessione a:", url);
 
         ws = new WebSocket(url);
@@ -398,7 +398,7 @@
         };
 
         let pendingAnswers = [];
-
+        let currentPositions = null;
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
@@ -436,6 +436,10 @@
                     `;
                     
                     console.log(data.message);
+                } else if (data.type === "positions") {
+                    // Salva la mappatura arrivata dal backend
+                    currentPositions = data.content;  
+                    console.log("🎲 Posizioni ricevute:", currentPositions);
                 } else if(data.type == "final_judgment"){
                     console.log(data.judgment)
 
@@ -458,10 +462,14 @@
                         li.textContent = ans.text;
 
                         if (ans.player === 1) {
+                            // Player 1 = left
                             li.className = "playerA";
+                            li.innerHTML = `<strong>A (${currentPositions.left.type})</strong>: ${ans.text}`;
                             document.getElementById("messagesA").appendChild(li);
                         } else if (ans.player === 2) {
+                            // Player 2 = right
                             li.className = "playerB";
+                            li.innerHTML = `<strong>B (${currentPositions.right.type})</strong>: ${ans.text}`;
                             document.getElementById("messagesB").appendChild(li);
                         }
                     });
@@ -560,6 +568,8 @@
             return;
         }
 
+        console.log("📤 Giudizio inviato:", chosen.value);
+
         // Invia solo la scelta al backend via WebSocket
         ws.send(JSON.stringify({
             type: "judge_choice",
@@ -648,9 +658,10 @@
                     const data = await response.json();
 
                     console.log("✅ Sessione creata:", data);
-                    
-                    window.location.href = "/judge";
+                
 
+                    // 👉 Passo il room_name come query param
+                    window.location.href = "/judge?room=" + encodeURIComponent(data.room_name);
                 } else {
                     console.error("Errore:", response.status, response.statusText);
                 }
@@ -667,8 +678,16 @@
         }
     });
 
+    // Recupera la stanza dall’URL ?room=...
+    function getRoomNameFromUrl() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get("room");
+    }
+
+    const roomName = getRoomNameFromUrl();
+
     // Avvia connessione alla stanza di default
-    setupWebSocket("room1");
+    setupWebSocket(roomName);
     </script>
 </body>
 </html>

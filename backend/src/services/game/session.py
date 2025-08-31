@@ -1,22 +1,21 @@
 from database.connection import create_db_connection
 from fastapi import HTTPException
-from fastapi import Response, Depends
+from fastapi import Response, Depends , WebSocket
 from uuid import UUID
 from fastapi_sessions.frontends.implementations import SessionCookie, CookieParameters
 from schemas.session_data import SessionData
 from fastapi_sessions.backends.implementations import InMemoryBackend
 from services.instances.cookie import cookie
 import mariadb
+import services.state as state
 
 async def create_session(response: Response, backend: InMemoryBackend[UUID, SessionData], session_uuid: UUID):
-    global previous_questions
-    global chat_history
 
     print("📦 Stato backend inizio create session: %s", backend.data)
 
     # Resetto le liste a ogni sessione
-    chat_history = []
-    previous_questions = []
+    state.chat_history = []
+    state.previous_questions = []
 
     conn = create_db_connection()
     cursor = conn.cursor()
@@ -43,8 +42,11 @@ async def create_session(response: Response, backend: InMemoryBackend[UUID, Sess
         if not old_data:
             raise HTTPException(status_code=404, detail="Session not found")
 
-        updated = old_data.model_copy(update={"session_id": db_session_id})
-        await backend.update(session_uuid, updated)
+        updated = old_data.model_copy(update={
+            "session_id": db_session_id,
+            "room_name": room_name
+        })
+        await backend.update(session_uuid, updated)     
 
         return {
             "status": "Success",
@@ -125,3 +127,18 @@ async def available_sessions():
     finally:
         cursor.close()
         conn.close()
+    
+async def setup_session(websocket: WebSocket, cookie: CookieParameters, backend: InMemoryBackend[UUID, SessionData]):
+    try:
+        session_uuid = cookie(websocket)
+        print(f"✅ Session UUID verificato: {session_uuid}")
+
+        stored_data = await backend.read(session_uuid)
+        if stored_data:
+            return stored_data.session_id, stored_data.user_id
+        else:
+            print("⚠️ Dati sessione non trovati")
+            return None, None
+    except Exception as e:
+        print(f"❌ Errore verifica sessione: {e}")
+        return None, None

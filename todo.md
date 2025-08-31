@@ -16,6 +16,7 @@ Fra
 - Pydantic ouput tipo trova_simile
 - Non conviene controllare in trova_simile prima se ci sono ripsoste umane relative alla domanda, prima di trovare bestcore
 - backend-1       | Risposte ricevute: 2/2 (Human: 0, Bot: 1) perché human 0
+- mette is_valiable 1 pure a sessions dingleplayer non vabbene
 
 Luca
 - Modalità SINGLE HUMAN in cui le domande le prendi dalle sessioni passate e le riposte BOT pure

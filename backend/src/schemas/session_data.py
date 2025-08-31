@@ -4,3 +4,4 @@ from pydantic import BaseModel
 class SessionData(BaseModel):
     user_id: int # id user_logato
     session_id: int | None = None
+    room_name: str | None = None

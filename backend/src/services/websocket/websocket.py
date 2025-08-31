@@ -103,6 +103,25 @@ class ConnectionManager:
                 except Exception as e:
                     print(f"Error sending to judge: {e}")
 
+    async def send_positions_to_judge(self, room_name: str, positions: dict):
+        """
+        Invia al judge la mappatura delle posizioni dei player
+        """
+       
+        # Trova tutti i client con ruolo JUDGE nella room
+        for client_id, client_data in self.rooms.get(room_name, {}).items():
+            if client_data["role"] == "JUDGE":
+                # Invia un messaggio strutturato in JSON invece di testo semplice
+                try:
+                    message = {
+                        "type": "positions",
+                        "content": positions
+                    }
+                    await client_data["ws"].send_text(json.dumps(message))
+                    print(f"Positions sent to judge (client {client_id})")
+                except Exception as e:
+                    print(f"Error sending to judge: {e}")
+                    
     async def send_to_judge(self, message: dict, room_name: str):
         """Invia un messaggio al giudice"""
         # Trova tutti i client con ruolo JUDGE nella room

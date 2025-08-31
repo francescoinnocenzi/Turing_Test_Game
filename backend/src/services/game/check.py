@@ -4,7 +4,7 @@ from services.llm.generate_question import auto_generate_next_question
 from services.game.scores import handle_scores
 from services.instances.manager import manager
 from database.connection import create_db_connection
-from services.state import user_id
+import services.state as state
 
 async def check_all_answered(question_id: int, room_name: str, session_id: int, role: str, mode: str):
     """Verifica se tutti i player hanno risposto alla domanda"""
@@ -19,7 +19,7 @@ async def check_all_answered(question_id: int, room_name: str, session_id: int, 
         """, (session_id,))
 
         question_count = cursor.fetchone()[0]
-        MAX_QUESTIONS = 2  # Configurabile
+        MAX_QUESTIONS = 1  # Configurabile
 
         await check_and_finalize_game(session_id, room_name, question_count, MAX_QUESTIONS, role, mode)
         
@@ -65,11 +65,11 @@ async def check_and_finalize_game(session_id: int, room_name: str, question_coun
 
             #Aggiusto punteggi
             if judgment_result.get("human_result") == "HUMAN ha PERSO":
-                print("✅ GIUDICE LLM ha indovinato (Player ha perso)! ")
-                handle_scores(user_id=user_id, session_id=session_id, mode="single",role=role, win=False) 
+                print(f"✅ GIUDICE LLM ha indovinato con user {state.user_id}")
+                handle_scores(user_id= state.user_id, session_id=session_id, mode="single",role=role, win=True) 
             elif judgment_result.get("human_result") == "HUMAN ha VINTO":
-                print("✅ GIUDICE LLM ha sbagliato (Player ha vinto)! ")
-                handle_scores(user_id=user_id, session_id=session_id, mode="single",role=role, win=True)
+                print(f"✅ GIUDICE LLM ha sbagliato con user {state.user_id}")
+                handle_scores(user_id= state.user_id, session_id=session_id, mode="single",role=role, win=False)
             else:
                 raise HTTPException(status_code=500, detail="Errore nei punteggi del giudizio LLM")
             # Invia risultato finale

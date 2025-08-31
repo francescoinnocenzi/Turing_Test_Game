@@ -434,8 +434,8 @@
     let currentQuestionId = null;
     let currentAnswer = null;
 
-    function setupWebSocket(selectedRoom, selectedMode) {
-        mode = selectedMode;
+    function setupWebSocket(selectedRoom) {
+        mode = "single";
 
         // Chiudi la WebSocket esistente se attiva
         if (ws && ws.readyState === WebSocket.OPEN) {
@@ -473,8 +473,15 @@
         };
     }
 
+    function getRoomNameFromUrl() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get("room");
+    }
+
+    const roomName = getRoomNameFromUrl();
+
     window.onload = function(){
-        setupWebSocket('room1', 'single');
+        setupWebSocket(roomName);
     }
 
     // --- invio messaggi ---
@@ -658,7 +665,7 @@
 
                     console.log("✅ Sessione creata:", data);
                     
-                    window.location.href = "/player";
+                    window.location.href = "/player?room=" + encodeURIComponent(data.room_name);
 
                 } else {
                     console.error("Errore:", response.status, response.statusText);
@@ -668,26 +675,6 @@
             }
         });
     }
-
-    // --- collego i bottoni room ---
-    // const rooms = ['room1', 'room2', 'room3'];
-
-    // document.querySelector('#room1').addEventListener('click', () => {
-    //     console.log("Hai scelto:", rooms[0]);
-    //     setupWebSocket(rooms[0], mode || "multi"); // se non hai ancora scelto mode, default = multi
-    // });
-
-    // // puoi aggiungere anche pulsanti per scegliere la modalità:
-    // document.querySelector('#btn-single').addEventListener('click', () => {
-    //     mode = "single";
-    //     console.log("Modalità impostata:", mode);
-    // });
-
-    // document.querySelector('#btn-multi').addEventListener('click', () => {
-    //     mode = "multi";
-    //     console.log("Modalità impostata:", mode);
-    // });
-
     </script>
 </body>
 </html>

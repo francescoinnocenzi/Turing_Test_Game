@@ -7,8 +7,9 @@ from fastapi import HTTPException
 import requests
 import random
 from services.llm.generate_answer import get_llm_response
+import services.state as state
 
-previous_questions : list[str] = []
+state.previous_questions = [] # : list[str] 
 
 # Funzione per ottenere domanda dal LLM
 async def get_llm_question():
@@ -45,9 +46,7 @@ def create_question_llm():
         {"role": "user", "content": f"Genera una domanda sul tema: {theme}"}
     ]
 
-    global previous_questions
-
-    for question in previous_questions:
+    for question in state.previous_questions:
         messages.append({
             "role": "user",
             "content": f"Domanda già fatta: {question}"
@@ -69,7 +68,7 @@ def create_question_llm():
         # print("Payload inviato a Ollama:\n", json.dumps(payload, indent=2))
 
         question = risposta_api["message"]["content"]
-        previous_questions.append(question)
+        state.previous_questions.append(question)
 
         return {"question": question} 
            

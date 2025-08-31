@@ -364,6 +364,8 @@ let clientId = Math.floor(Math.random()*100000);
 let role = 'JUDGE';
 let roomName = getRoomNameFromUrl();
 let pendingAnswers = [];
+let questionCounter = 0;
+let currentPositions = null;
 
 document.getElementById("room-id").textContent = roomName || "Nessuna";
 // document.getElementById("ws-id").textContent = clientId;
@@ -393,36 +395,95 @@ if(roomName){
         </div>`;
     }
     else if(data.type === "all_answered"){
-      pendingAnswers.forEach(ans => {
-        const li = document.createElement("li");
-        li.textContent = ans.text;
-        li.className = ans.player === 1 ? "playerA" : "playerB";
-        document.getElementById(ans.player === 1 ? "messagesA" : "messagesB").appendChild(li);
-      });
-      document.getElementById("questionInput").disabled = false;
-      document.querySelector(".send-button").disabled = false;
-      document.getElementById("questionInput").placeholder = '✍️ Scrivi una domanda...';
-      pendingAnswers = [];
-      scrollChats();
+        console.log("✅ Tutti i player hanno risposto!");
+
+        console.log(pendingAnswers);
+
+        // Stampa tutte le risposte accumulate
+        pendingAnswers.forEach(ans => {
+            const li = document.createElement("li");
+            li.textContent = ans.text;
+
+            if (ans.player === 1) {
+                // Player 1 = left
+                li.className = "playerA";
+                li.innerHTML = `<strong>A (${currentPositions.left.type})</strong>: ${ans.text}`;
+                document.getElementById("messagesA").appendChild(li);
+            } else if (ans.player === 2) {
+                // Player 2 = right
+                li.className = "playerB";
+                li.innerHTML = `<strong>B (${currentPositions.right.type})</strong>: ${ans.text}`;
+                document.getElementById("messagesB").appendChild(li);
+            }
+        });
+
+        // Svuota il buffer
+        pendingAnswers = [];
+
+        scrollAllChats();
+
+        input.disabled = false;
+        input.placeholder = "✍️ Scrivi una domanda...";
+        button.disabled = false;
+    }else if (data.type === "positions") {
+        // Salva la mappatura arrivata dal backend
+        currentPositions = data.content;  
+        console.log("🎲 Posizioni ricevute:", currentPositions);
     }
     else if(data.type === "final_judgment"){
-      alert("Gioco terminato: " + data.judgment);
+        console.log(data.judgment)
+
+        const patterns = ["GIUDICE ha VINTO", "GIUDICE ha PERSO"];
+        const judgeResult = patterns.find(p => data.judgment.includes(p));
+
+        console.log(judgeResult);
+
+        if (judgeResult) {
+            showResultModal(judgeResult);
+        }
     }
   };
 }
 
-function sendQuestion(){
-  const input = document.getElementById("questionInput");
-  const sendBtn = document.querySelector('.send-button');
-  const text = input.value.trim();
-  if(!text) return;
-  ws.send(JSON.stringify({type:"question", text:text}));
-  input.value = "";
-  input.disabled = true;
-  sendBtn.disabled = true;
-  input.placeholder = 'In attesa delle risposte...';
-  document.querySelector(".send-button").disabled = true;
-}
+function sendQuestion() {
+        const input = document.getElementById("questionInput");
+        const button = document.querySelector(".send-button");
+        const text = input.value.trim();
+
+        if (!text) return;
+
+        // Aggiungi la domanda nelle due chat PRIMA di inviarla (in modo che le risposte appaiano sotto)
+        questionCounter += 1;
+        const qid = `q-${Date.now()}-${questionCounter}`;
+        lastQuestion = { id: qid, text };
+
+        const qLi1 = document.createElement('li');
+        qLi1.className = 'question-item';
+        qLi1.textContent = `Domanda: ${text}`;
+        qLi1.setAttribute('data-qid', qid);
+        document.getElementById('messagesA').appendChild(qLi1);
+
+        const qLi2 = document.createElement('li');
+        qLi2.className = 'question-item';
+        qLi2.textContent = `Domanda: ${text}`;
+        qLi2.setAttribute('data-qid', qid);
+        document.getElementById('messagesB').appendChild(qLi2);
+
+        scrollAllChats(); 
+
+        // Invia la domanda al server (includiamo un qid nel payload)
+        const msg = { type: "question", text: text, qid: qid };
+        ws.send(JSON.stringify(msg));
+        console.log("📨 Domanda inviata:", text);
+
+        // Pulisci l'input
+        input.value = "";
+
+        input.disabled = true;
+        input.placeholder = "⏳ Attendo risposte...";
+
+        button.disabled = true;
+    }
 
 function submitJudgment(){
   const selected = document.querySelector('input[name="chosen_player"]:checked');
@@ -437,9 +498,86 @@ document.getElementById("questionInput").addEventListener("keydown", function(ev
   }
 });
 
-function scrollChats(){
+function scrollAllChats(){
   document.querySelectorAll('.chat-box').forEach(box => box.scrollTop = box.scrollHeight);
 }
+
+function showResultModal(result) {
+        // Determina se ha vinto o perso
+        const hasWon = result.includes("VINTO");
+        
+        // Crea l'overlay della modale
+        const modalOverlay = document.createElement('div');
+        modalOverlay.className = `modal-overlay ${hasWon ? 'result-win' : 'result-lose'}`;
+        
+        // Contenuto della modale
+        modalOverlay.innerHTML = `
+            <div class="modal-content">
+                <span class="result-icon">${hasWon ? '🎉' : '😔'}</span>
+                <div class="result-title">${hasWon ? 'HAI VINTO!' : 'HAI PERSO!'}</div>
+                <div class="result-details">
+                ${hasWon ? 
+                    '👏 Ottimo intuito! Sei riuscito a riconoscere correttamente chi era umano.' : 
+                    '😵 Questa volta ti hanno ingannato... hai scambiato il bot per umano o viceversa.'
+                }
+                </div>
+                
+                <a href="/singleplayer" class="close-button"">
+                    🏠 Torna al Menu
+                </a>
+                <button id="play-again" class="close-button"">
+                    🎮 Gioca ancora
+                </button> 
+            </div>
+        `;
+        
+        // Aggiungi al body
+        document.body.appendChild(modalOverlay);
+
+        createSession(document.getElementById('play-again'));
+        
+        // Salva riferimento per poterla chiudere
+        window.currentModal = modalOverlay;
+        
+        console.log("🎯 Risultato mostrato:", result);
+    }
+
+    function createSession(bottone){
+        bottone.addEventListener('click', async (event) => {
+            event.preventDefault();
+            try {
+                const response = await fetch("http://localhost:8003/create/session", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    credentials: "include" // Quando chiamo /create/session, il backend ti manda un cookie di sessione. Se non metto "include", quel cookie non verrà mai salvato
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+
+                    console.log("✅ Sessione creata:", data);
+                
+
+                    // 👉 Passo il room_name come query param
+                    window.location.href = "/judge_multi?room=" + encodeURIComponent(data.room_name);
+                } else {
+                    console.error("Errore:", response.status, response.statusText);
+                }
+            } catch (error) {
+                console.error("Errore nel recupero della sessione:", error);
+            }
+        });
+    }
+
+    // ✅ NUOVA FUNZIONE: Chiudi modale
+    function closeResultModal() {
+        if (window.currentModal) {
+            window.currentModal.remove();
+            window.currentModal = null;
+        }
+    }
 
 // Recupera la stanza dall’URL ?room=...
 function getRoomNameFromUrl() {
