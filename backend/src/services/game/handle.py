@@ -1,6 +1,7 @@
 from schemas.question import QuestionRequest
 from schemas.answer import AnswerRequest
 from schemas.judgment import JudgmentRequest
+from schemas.judgment import JudgmentRequest
 from services.game.questions import create_question
 from services.game.answers import create_answer
 from services.game.judgment import create_judgment

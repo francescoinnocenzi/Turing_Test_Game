@@ -17,6 +17,7 @@ from services.game.questions import create_question
 from services.game.answers import create_answer
 from services.auth.login import login
 from services.game.judgment import create_judgment
+from services.game.judgment import create_judgment
 from services.auth.register import register
 from services.websocket.ws_entrypoint import ws_entrypoint
 from services.llm.generate_answer import trova_simile

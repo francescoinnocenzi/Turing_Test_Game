@@ -10,7 +10,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY frontend/src /app
 COPY frontend/src/templates /app/templates
-COPY frontend/src/static /app/static
+#COPY frontend/src/static /app/static
 
 ENV PYTHONPATH=/app
 

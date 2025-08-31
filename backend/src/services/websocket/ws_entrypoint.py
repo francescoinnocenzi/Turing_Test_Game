@@ -7,8 +7,9 @@ from fastapi_sessions.backends.implementations import InMemoryBackend
 from uuid import UUID
 from schemas.session_data import SessionData
 from schemas.judgment import JudgmentRequest
-from services.game.handle import handle_question, handle_answer
+from services.game.handle import handle_question, handle_answer, handle_message
 from services.llm.generate_question import auto_generate_next_question
+from services.game.judgment import create_judgment
 from services.game.judgment import create_judgment
 from services.game.scores import handle_scores
 from services.game.session import setup_session
@@ -19,6 +20,7 @@ from services.instances.session_backend import backend
 from services.game.handle import assign_and_send_positions
 import services.state as state
 
+'''
 '''
 async def ws_entrypoint(websocket: WebSocket, room_name: str, client_id: int, cookie: CookieParameters, backend: InMemoryBackend[UUID, SessionData], manager: ConnectionManager):
     #Prendo parametri dalla query string
