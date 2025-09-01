@@ -21,7 +21,6 @@ from services.game.handle import assign_and_send_positions
 import services.state as state
 
 '''
-'''
 async def ws_entrypoint(websocket: WebSocket, room_name: str, client_id: int, cookie: CookieParameters, backend: InMemoryBackend[UUID, SessionData], manager: ConnectionManager):
     #Prendo parametri dalla query string
     role = websocket.query_params.get("role", "SPECTATOR").upper()
