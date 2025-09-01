@@ -46,10 +46,10 @@ async def assign_and_send_positions(room_name: str, manager):
 
 
 #Gestione della domanda in arrivo (singleplayer)
-async def handle_question(room_name, client_id, websocket, role, message, mode, session_id, user_id):
+async def handle_question(room_name, websocket, role, message, mode, session_id, user_id):
     text = message.get("text")
 
-    print(f"❓ Domanda dal giudice {client_id}: {text}")
+    print(f"❓ Domanda dal giudice: {text}")
     
     # Salva domanda
     q_req = QuestionRequest(
@@ -104,13 +104,13 @@ async def handle_question(room_name, client_id, websocket, role, message, mode, 
     await check_all_answered(saved_q.id, room_name, session_id=session_id, role="JUDGE", mode=mode)
 
 #Gestione della risposta inviata singleplayer
-async def handle_answer(room_name, client_id, websocket, role, message, mode, session_id, user_id):
+async def handle_answer(room_name, websocket, role, message, mode, session_id, user_id):
     print("RISPOSTA ARRIVATA:",{"role": role, "message": message, "mode": mode})
     print(f"QUESTION_ID in handle_answer: {message.get('question_id')}") # stampa None
     text = message.get("text")
     question_id = message.get("question_id")
 
-    print(f" Risposta da {role} (client {client_id}): {text} mode : {mode}")
+    print(f" Risposta da {role}: {text} mode : {mode}")
 
     await manager.send_answer_to_judge(text, room_name, role)
 
@@ -130,11 +130,11 @@ async def handle_answer(room_name, client_id, websocket, role, message, mode, se
 async def handle_raw_text(room_name, client_id, role, text, mode, session_id):
     print(f" Raw text da {role}: {text}")
     if role == "JUDGE":
-        await handle_question(room_name, client_id, role, {"text": text}, None, mode, session_id=session_id)
+        await handle_question(room_name, role, {"text": text}, None, mode, session_id=session_id)
     else:
-        await handle_answer(room_name, client_id, role, {"text": text}, None, mode, session_id=session_id)
+        await handle_answer(room_name, role, {"text": text}, None, mode, session_id=session_id)
 
-async def handle_message(msg_type, room_name, client_id, websocket, role, message, mode, session_id, user_id, manager):
+async def handle_message(msg_type, room_name, websocket, role, message, mode, session_id, user_id, manager):
     handlers = {
         "question": handle_question,
         "answer": handle_answer,
@@ -146,7 +146,7 @@ async def handle_message(msg_type, room_name, client_id, websocket, role, messag
         if msg_type == "judge_choice":
             await handler(room_name, message, session_id, user_id, manager, role, mode)
         else:
-            await handler(room_name, client_id, websocket, role, message, mode, session_id, user_id)
+            await handler(room_name, websocket, role, message, mode, session_id, user_id)
     else:
         print(f"⚠️ Messaggio sconosciuto: {msg_type}")
 

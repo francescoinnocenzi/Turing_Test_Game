@@ -7,7 +7,7 @@ from pydantic import BaseModel
 app = FastAPI()
 
 # Monta la directory "static" per servire file statici (CSS, JS, immagini, ecc.)
-#app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Configura il motore di template Jinja2, che si aspetta file HTML nella cartella "templates"
 templates = Jinja2Templates(directory="templates")

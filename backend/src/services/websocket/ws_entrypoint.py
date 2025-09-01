@@ -210,7 +210,7 @@ async def ws_entrypoint(websocket, room_name, client_id, cookie, backend, manage
                 msg_type = message.get("type")
                 print(f"📥 Messaggio ricevuto: {message}")
 
-                await handle_message(msg_type, room_name, client_id, websocket, role, message, mode, session_id, user_id, manager)
+                await handle_message(msg_type, room_name, websocket, role, message, mode, session_id, user_id, manager)
 
             except json.JSONDecodeError:
                 await handle_raw_text(room_name, client_id, role, data, mode, session_id=session_id)

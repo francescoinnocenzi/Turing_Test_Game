@@ -165,11 +165,3 @@ async def handle_available_sessions(session_data: SessionData = Depends(verifier
 @app.get("/ranking")
 def handle_ranking(session_data: SessionData = Depends(verifier)):
     return get_ranking()
-
-        
-for route in app.routes:
-    if hasattr(route, "methods"):
-        methods = ",".join(route.methods or [])
-    else:
-        methods = "WEBSOCKET"
-    print(f"{methods:10s} -> {route.path}")
