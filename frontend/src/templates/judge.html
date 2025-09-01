@@ -651,7 +651,8 @@
                     headers: {
                         "Content-Type": "application/json"
                     },
-                    credentials: "include" // Quando chiamo /create/session, il backend ti manda un cookie di sessione. Se non metto "include", quel cookie non verrà mai salvato
+                    credentials: "include", // Quando chiamo /create/session, il backend ti manda un cookie di sessione. Se non metto "include", quel cookie non verrà mai salvato
+                    body: JSON.stringify({ mode: "single" }) // Passo il mode
                 });
 
                 if (response.ok) {

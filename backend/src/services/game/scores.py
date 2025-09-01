@@ -51,24 +51,21 @@ def handle_scores(user_id: int, session_id: int, mode: str, role : str, win: boo
 
             print(f"✅ Punteggi aggiornati: User {player_user_id}, Session {session_id}, Score {human_score}, Mode {mode}, Role HUMAN")
         elif mode == "SINGLEPLAYER":
+            score = 0 #punteggio dell'unico giocatore
             if role == "JUDGE" and win:
-                judge_score = 2 #bot
-                human_score = 0
+                score = 2
             elif role == "JUDGE" and not win:
-                judge_score = 0 #bot
-                human_score = 1
+                score = 0
             elif role == "HUMAN" and win:
-                judge_score = 2 #bot
-                human_score = 0
+                score = 0
             elif role == "HUMAN" and not win:
-                judge_score = 0 #bot
-                human_score = 1
+                score = 1
             else:
                 print("Errore Aggiornamento Punteggi: In singleplayer")
             cursor.execute("""
             INSERT INTO scores (user_id, session_id, score, mode, player_role)
             VALUES (?, ?, ?, ?, ?)
-            """, (user_id, session_id, human_score, mode, "HUMAN"))
+            """, (user_id, session_id, score, mode, role))
             conn.commit()
         else:
             print("Errore Aggiornamento Punteggi: Modalità sconosciuta")

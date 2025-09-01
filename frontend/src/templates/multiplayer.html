@@ -131,7 +131,7 @@ async function createJudgeSession() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
-            body: JSON.stringify({}) // non serve room_name, backend genera unico
+            body: JSON.stringify({ mode: "multi" }) // Passo il mode
         });
         if (!response.ok) throw new Error("Errore creazione sessione");
         const data = await response.json();

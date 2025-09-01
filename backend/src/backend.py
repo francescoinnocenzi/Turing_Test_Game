@@ -149,10 +149,10 @@ async def handle_trova_simile(request: QuestionRequest, session_data: SessionDat
     return await trova_simile(request)
 
 @app.post("/create/session")
-async def handle_create_session(response: Response, session_uuid: UUID = Depends(cookie)):
+async def handle_create_session(response: Response, request: Request, session_uuid: UUID = Depends(cookie)):
     print("➡️ Sono entrato in handle_create_session")
     print("📌 session_uuid ricevuto:", session_uuid)
-    return await create_session(response, backend, session_uuid)
+    return await create_session(response, request, backend, session_uuid)
 
 @app.post("/join/session/{room_name}")
 async def handle_join_session(room_name: str, session_uuid: UUID = Depends(cookie)):
