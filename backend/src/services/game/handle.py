@@ -80,13 +80,13 @@ async def handle_question(room_name, client_id, websocket, role, message, mode, 
         author_type="BOT",
         room_name=room_name
     ))
-    await manager.send_answer_to_judge(bot1_resp, room_name, 2)
+    await manager.send_answer_to_judge(bot1_resp, room_name, "BOT")
     print(f" BOT-LLM answer sent: {bot1_resp}")  
     
     if mode == "single":
         # BOT 2 (retrieval o fallback LLM)
         bot2_data = await trova_simile(q_req)
-        bot2_resp = bot2_data["risposta_trovata"]
+        bot2_resp = bot2_data.risposta_trovata
         
         #Salva risposta bot retrival solo se generata da LLM (perche HUMAN è gia presente nel DB)
 
@@ -95,10 +95,10 @@ async def handle_question(room_name, client_id, websocket, role, message, mode, 
             session_id=session_id,
             text=bot2_resp,
             author_user_id=None,
-            author_type="BOT_AS_HUMAN" if bot2_data["tipo_risposta"] == "LLM" else "HUMAN",
+            author_type="BOT_AS_HUMAN" if bot2_data.tipo_risposta == "LLM" else "HUMAN",
             room_name=room_name
         ))
-        await manager.send_answer_to_judge(bot2_resp, room_name, 1) #metto 1 perche risponde al posto di HUMAN
+        await manager.send_answer_to_judge(bot2_resp, room_name, "HUMAN") #metto 1 perche risponde al posto di HUMAN
         print(f" BOT-Retrieval answer sent: {bot2_resp}")  # <-- log
 
     await check_all_answered(saved_q.id, room_name, session_id=session_id, role="JUDGE", mode=mode)
@@ -110,10 +110,9 @@ async def handle_answer(room_name, client_id, websocket, role, message, mode, se
     text = message.get("text")
     question_id = message.get("question_id")
 
-    player_number = 1 if role == "HUMAN" else 2
     print(f" Risposta da {role} (client {client_id}): {text} mode : {mode}")
 
-    await manager.send_answer_to_judge(text, room_name, player_number)
+    await manager.send_answer_to_judge(text, room_name, role)
 
     if question_id:
         create_answer(AnswerRequest(

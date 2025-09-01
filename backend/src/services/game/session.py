@@ -8,6 +8,7 @@ from fastapi_sessions.backends.implementations import InMemoryBackend
 from services.instances.cookie import cookie
 import mariadb
 import services.state as state
+from schemas.session import SessionResponse, AvailableSessionsResponse, SessionInfo
 
 async def create_session(response: Response, request: Request,backend: InMemoryBackend[UUID, SessionData], session_uuid: UUID):
 
@@ -58,13 +59,14 @@ async def create_session(response: Response, request: Request,backend: InMemoryB
         })
         await backend.update(session_uuid, updated)     
 
-        return {
-            "status": "Success",
-            "db_session_id": db_session_id,
-            "room_name": room_name,
-            "session_uuid": str(session_uuid),
-            "mode": mode
-        }
+        response = SessionResponse(
+            db_session_id=db_session_id,
+            room_name=room_name,
+            session_uuid=str(session_uuid),
+            mode=mode
+        )
+
+        return response
 
     except mariadb.Error as e:
         conn.rollback()
@@ -96,13 +98,14 @@ async def join_session(room_name: str, backend: InMemoryBackend[UUID, SessionDat
         cursor.execute("UPDATE sessions SET is_available = ? WHERE id = ?", (False, db_session_id))
         conn.commit()
 
-        return {
-            "status": "Success",
-            "db_session_id": db_session_id,
-            "room_name": room_name,
-            "session_uuid": str(session_uuid),
-            "mode": "multi"
-        }
+        response = SessionResponse(
+            db_session_id=db_session_id,
+            room_name=room_name,
+            session_uuid=str(session_uuid),
+            mode='multi'
+        )
+
+        return response
 
     finally:
         cursor.close()
@@ -131,11 +134,13 @@ async def available_sessions():
         rows = cursor.fetchall()
 
         sessions = [
-            {"id": row[0], "room_name": row[1], "created_at": row[2].isoformat()}
+            SessionInfo(id=row[0], room_name=row[1], created_at=row[2].isoformat())
             for row in rows
         ]
 
-        return {"available_sessions": sessions}
+        response = AvailableSessionsResponse(available_sessions=sessions)
+        
+        return response
 
     finally:
         cursor.close()

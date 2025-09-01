@@ -365,7 +365,7 @@ let role = 'JUDGE';
 let roomName = getRoomNameFromUrl();
 let pendingAnswers = [];
 let questionCounter = 0;
-let currentPositions = null;
+let currentPositions = {};
 
 document.getElementById("room-id").textContent = roomName || "Nessuna";
 // document.getElementById("ws-id").textContent = clientId;
@@ -379,6 +379,11 @@ if(roomName){
 
   ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
+    const input = document.getElementById("questionInput");
+    
+    const button = document.querySelector(".send-button");
+
+    console.log("📩 Messaggio ricevuto:", data);
 
     if(data.type === "player_answer"){
       pendingAnswers.push(data);
@@ -399,22 +404,20 @@ if(roomName){
 
         console.log(pendingAnswers);
 
-        // Stampa tutte le risposte accumulate
         pendingAnswers.forEach(ans => {
             const li = document.createElement("li");
             li.textContent = ans.text;
 
-            if (ans.player === 1) {
-                // Player 1 = left
+            if (ans.player_role === currentPositions.left.type) {
                 li.className = "playerA";
-                li.innerHTML = `<strong>A (${currentPositions.left.type})</strong>: ${ans.text}`;
+                li.innerHTML = `<strong>A (${ans.player_role})</strong>: ${ans.text}`;
                 document.getElementById("messagesA").appendChild(li);
-            } else if (ans.player === 2) {
-                // Player 2 = right
+            } else if (ans.player_role === currentPositions.right.type) {
                 li.className = "playerB";
-                li.innerHTML = `<strong>B (${currentPositions.right.type})</strong>: ${ans.text}`;
+                li.innerHTML = `<strong>B (${ans.player_role})</strong>: ${ans.text}`;
                 document.getElementById("messagesB").appendChild(li);
             }
+
         });
 
         // Svuota il buffer
@@ -427,8 +430,10 @@ if(roomName){
         button.disabled = false;
     }else if (data.type === "positions") {
         // Salva la mappatura arrivata dal backend
-        currentPositions = data.content;  
-        console.log("🎲 Posizioni ricevute:", currentPositions);
+        // Aggiorna le posizioni correnti
+        currentPositions.left = data.content.left;   // "HUMAN" o "BOT"
+        currentPositions.right = data.content.right; // "HUMAN" o "BOT"
+        console.log("Posizioni aggiornate:", currentPositions);
     }
     else if(data.type === "final_judgment"){
         console.log(data.judgment)

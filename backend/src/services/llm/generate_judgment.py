@@ -1,6 +1,7 @@
 
 from database.connection import create_db_connection
 import requests
+from schemas.judgment import LLMJudgmentResponse
 
 async def get_llm_judgment(session_id: int):
     """Fa decidere all'LLM chi è HUMAN e chi è BOT basandosi sulle risposte della sessione"""
@@ -110,16 +111,16 @@ async def get_llm_judgment(session_id: int):
         elif llm_choice == 'B' and player_b_real_type == "HUMAN":
             correct_answer = True
 
-        return {
-            "correct_answer": correct_answer,
-            "llm_choice": llm_choice,
-            "judgment": llm_judgment,
-            "session_id": session_id,
-            "human_responses": len(human_responses),
-            "bot_responses": len(bot_responses),
-            "correct_guess": ("GIUDICE ha VINTO" if correct_answer else "GIUDICE ha PERSO"),
-            "human_result": ("HUMAN ha VINTO" if not correct_answer else "HUMAN ha PERSO")
-        }
+        return LLMJudgmentResponse(
+            # correct_answer=correct_answer,
+            # llm_choice=llm_choice,
+            judgment=llm_judgment,
+            # session_id=session_id,
+            # human_responses=len(human_responses),
+            # bot_responses=len(bot_responses),
+            # correct_guess="GIUDICE ha VINTO" if correct_answer else "GIUDICE ha PERSO",
+            human_result="HUMAN ha VINTO" if not correct_answer else "HUMAN ha PERSO"
+        )
         
     except Exception as e:
         print(f"Errore nel giudizio LLM: {e}")

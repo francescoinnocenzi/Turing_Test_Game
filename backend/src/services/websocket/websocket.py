@@ -86,7 +86,7 @@ class ConnectionManager:
         
         print(f"Question sent to {sent_count} players")
 
-    async def send_answer_to_judge(self, answer: str, room_name: str, player_number: int):
+    async def send_answer_to_judge(self, answer: str, room_name: str, player_role: int):
         """Invia una risposta dal player al giudice"""
         # Trova tutti i client con ruolo JUDGE nella room
         for client_id, client_data in self.rooms.get(room_name, {}).items():
@@ -95,7 +95,7 @@ class ConnectionManager:
                 try:
                     message = {
                         "type": "player_answer",
-                        "player": player_number,
+                        "player_role": player_role,
                         "text": answer
                     }
                     await client_data["ws"].send_text(json.dumps(message))

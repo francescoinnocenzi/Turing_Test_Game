@@ -1,7 +1,7 @@
 from schemas.api_models import RequestAPI, ResponseAPI
 import requests
 import json
-from utils.emoji import remove_emoji
+from utils.clean_text import clean_text
 from fastapi import HTTPException
 from schemas.question import QuestionRequest
 from database.connection import create_db_connection
@@ -11,6 +11,7 @@ from services.llm.transformer import get_model
 import torch
 from sentence_transformers import util
 import services.state as state
+from schemas.api_models import SimilarityResponse
 
 state.chat_history = [] # list[dict]
 
@@ -56,7 +57,7 @@ def ask_with_memory(request: RequestAPI):
         print("Payload inviato a Ollama:\n", json.dumps(payload, indent=2))
 
         answer = risposta_api["message"]["content"]
-        answer = remove_emoji(answer)
+        answer = clean_text(answer)
         
         state.chat_history.append({"role": "assistant", "content": answer})
 
@@ -86,13 +87,15 @@ async def trova_simile(request: QuestionRequest):
 
         if not frasi_trovate:
             risposta_nuova = await get_llm_response(input_frase)
-            return {
-                "frase_input": input_frase,
-                "frase_simile": None,
-                "risposta_trovata": risposta_nuova,
-                "similarità": 0.0,
-                "tipo_risposta": "LLM"
-            }
+            response = SimilarityResponse(
+                frase_input=input_frase,
+                frase_simile=None,
+                risposta_trovata=risposta_nuova,
+                similarita=0.0,
+                tipo_risposta="LLM"
+            )
+            
+            return response
 
         # Estraggo testi, id e embeddings dal DB
         ids = []
@@ -139,19 +142,24 @@ async def trova_simile(request: QuestionRequest):
     print(f"BEST SCORE {best_score}")
 
     if best_score > soglia_similarità and risposta_trovata:
-        return {
-            "frase_input": input_frase,
-            "frase_simile": best_sentence,
-            "risposta_trovata": risposta_trovata,
-            "similarità": best_score,
-            "tipo_risposta": "HUMAN"
-        }
+        response = SimilarityResponse(
+            frase_input=input_frase,
+            frase_simile=best_sentence,
+            risposta_trovata=risposta_trovata,
+            similarita=best_score,
+            tipo_risposta="HUMAN"
+        )
+
+        return response
     else:
         risposta_nuova = await get_llm_response(input_frase)
-        return {
-            "frase_input": input_frase,
-            "frase_simile": None,
-            "risposta_trovata": risposta_nuova,
-            "similarità": 0.0,
-            "tipo_risposta": "LLM"
-        }
+        
+        response = SimilarityResponse(
+            frase_input=input_frase,
+            frase_simile=None,
+            risposta_trovata=risposta_nuova,
+            similarita=0.0,
+            tipo_risposta="LLM"
+        )
+
+        return response

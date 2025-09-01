@@ -85,6 +85,6 @@ async def process_auto_question(room_name, websocket, question, session_id):
         author_type="BOT",
         room_name=room_name
     ))
-    await manager.send_answer_to_judge(bot_resp, room_name, 2)
+    await manager.send_answer_to_judge(bot_resp, room_name, "BOT")
     print(f"🤖 BOT-AUTO answer sent: {bot_resp}")
     
