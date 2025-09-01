@@ -7,7 +7,7 @@ from fastapi_sessions.session_verifier import SessionVerifier
 
 from schemas.question import QuestionRequest, QuestionResponse
 from schemas.answer import AnswerRequest, AnswerResponse
-from schemas.api_models import RequestAPI, ResponseAPI
+from schemas.api_models import RequestAPI, ResponseAPI, SimilarityResponse
 from schemas.judgment import JudgmentRequest, JudgmentResponse
 from schemas.register import RegisterRequest, RegisterResponse
 from schemas.login import LoginRequest, LoginResponse
@@ -28,6 +28,8 @@ from services.game.ranking import get_ranking
 from services.instances.session_backend import backend
 from services.instances.cookie import cookie
 from services.instances.manager import manager
+from schemas.session import SessionResponse, AvailableSessionsResponse
+from schemas.ranking import RankingResponse
 
 import mariadb
 from pydantic import BaseModel
@@ -58,110 +60,56 @@ app.add_middleware(
     allow_headers=["*"],  
 )
 
-# 🔹 2. Configura backend e cookie
-#backend = InMemoryBackend[UUID, SessionData]()# è un dizionario che mappa: una chiave (UUID) ad un valore SessionData.
-# {
-#   UUID("123e4567..."): SessionData(session_id=1)
-# }
-
-from fastapi import Depends, HTTPException, status
-
-from fastapi_sessions.session_verifier import SessionVerifier
-
-class MySessionVerifier(SessionVerifier[UUID, SessionData]):
-    def __init__(self, backend: InMemoryBackend[UUID, SessionData]):
-        self._backend = backend
-        self._auto_error = False
-        self._identifier = "general_verifier"
-
-    @property
-    def backend(self):
-        return self._backend
-
-    @property
-    def auto_error(self):
-        return self._auto_error
-
-    @property
-    def identifier(self):
-        return self._identifier
-
-    async def verify_session(self, session_data: SessionData):
-        if not session_data:
-            return None  # invece di sollevare un BackendError
-        if not session_data.session_id:
-            raise HTTPException(status_code=401, detail="Utente non loggato")
-        return session_data
-
-verifier = MySessionVerifier(backend)
-
-
-async def verify_ws_session(session_uuid: UUID):
-    session_data = await backend.read(session_uuid)
-    if not session_data or not session_data.session_id:
-        return None
-    return session_data
-
-@app.post("/api/register")
-def handle_register(register_request: RegisterRequest):
+@app.post("/api/register", response_model=RegisterResponse)
+def handle_register(register_request: RegisterRequest) -> RegisterResponse:
     return register(register_request)
 
-@app.post("/api/login")
-async def handle_login(login_request: LoginRequest, response: Response):
+@app.post("/api/login", response_model=LoginResponse)
+async def handle_login(login_request: LoginRequest, response: Response) -> LoginResponse:
     return await login(login_request, response, cookie)
 
 @app.post("/questions/create", response_model=QuestionResponse)
-def generate_question(request: QuestionRequest, session_data: SessionData = Depends(verifier)):
-    if not session_data:
-        raise HTTPException(status_code=401, detail="Utente non loggato")
+def generate_question(request: QuestionRequest) -> QuestionResponse:
     return create_question(request)
 
 
 @app.post("/answers/create", response_model=AnswerResponse)
-def generate_answer(request: AnswerRequest, session_data: SessionData = Depends(verifier)):
+def generate_answer(request: AnswerRequest) -> AnswerResponse:
     return create_answer(request)
 
 @app.post("/create/judgment", response_model=JudgmentResponse)
-def handle_judgment(request: JudgmentRequest, session_data: SessionData = Depends(verifier)):
+def handle_judgment(request: JudgmentRequest) -> JudgmentResponse:
     return create_judgment(request)
-    
-# Endpoint WebSocket per gestire la comunicazione in tempo reale
-@app.websocket("/ws/{room_name}/{client_id}")
-async def handle_websocket_endpoint(websocket: WebSocket, room_name: str, client_id: int):
-    session_uuid = cookie(websocket)
-    session_data = await verify_ws_session(session_uuid)
-    if not session_data:
-        await websocket.close(code=1008)  # Policy Violation
-        return
 
+@app.websocket("/ws/{room_name}/{client_id}")
+async def handle_websocket_endpoint(websocket: WebSocket, room_name: str, client_id: int) -> None:
     return await ws_entrypoint(websocket, room_name, client_id, cookie, backend, manager)
 
-@app.post("/ask")
-def handle_ask_with_memory(session_data: SessionData = Depends(verifier)):
+@app.post("/ask", response_model=ResponseAPI)
+def handle_ask_with_memory() -> ResponseAPI:
     return ask_with_memory()
 
-@app.post("/question/llm")
-def handle_create_question_llm(session_data: SessionData = Depends(verifier)):
+@app.post("/question/llm", response_model=dict[str, str])
+def handle_create_question_llm() -> dict[str, str]:
     return create_question_llm()
 
-@app.post("/trova_simile")
-async def handle_trova_simile(request: QuestionRequest, session_data: SessionData = Depends(verifier)):
+@app.post("/trova_simile", response_model=SimilarityResponse)
+async def handle_trova_simile(request: QuestionRequest) -> SimilarityResponse:
     return await trova_simile(request)
 
-@app.post("/create/session")
-async def handle_create_session(response: Response, request: Request, session_uuid: UUID = Depends(cookie)):
-    print("➡️ Sono entrato in handle_create_session")
-    print("📌 session_uuid ricevuto:", session_uuid)
+@app.post("/create/session", response_model=SessionResponse)
+async def handle_create_session(response: Response, request: Request, session_uuid: UUID = Depends(cookie)) -> SessionResponse:
+    print("session_uuid ricevuto:", session_uuid)
     return await create_session(response, request, backend, session_uuid)
 
-@app.post("/join/session/{room_name}")
-async def handle_join_session(room_name: str, session_uuid: UUID = Depends(cookie)):
+@app.post("/join/session/{room_name}", response_model=SessionResponse)
+async def handle_join_session(room_name: str, session_uuid: UUID = Depends(cookie)) -> SessionResponse:
     return await join_session(room_name, backend, session_uuid)
 
-@app.get("/available/sessions")
-async def handle_available_sessions(session_data: SessionData = Depends(verifier)):
+@app.get("/available/sessions", response_model=AvailableSessionsResponse)
+async def handle_available_sessions() -> AvailableSessionsResponse:
     return await available_sessions()
 
-@app.get("/ranking")
-def handle_ranking(session_data: SessionData = Depends(verifier)):
+@app.get("/ranking", response_model=RankingResponse)
+def handle_ranking() -> RankingResponse:
     return get_ranking()

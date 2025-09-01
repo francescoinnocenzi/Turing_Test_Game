@@ -1,11 +1,19 @@
 from database.connection import create_db_connection
 from fastapi import HTTPException
 import mariadb
+from typing import List
 from schemas.ranking import RankingEntry, RankingResponse
 
+def get_ranking() -> RankingResponse:
+    """
+    Recupera la classifica dei giocatori basata sui punteggi totali.
 
-def get_ranking():
-    """Recupera la classifica dei giocatori basata sui punteggi"""
+    Returns
+        RankingResponse: Oggetto contenente la lista dei top 10 giocatori con punteggio.
+    
+    Raises
+        HTTPException: Se c'è un errore nel recupero dei dati dal database.
+    """
     conn = create_db_connection()
     cursor = conn.cursor()
 
@@ -20,10 +28,9 @@ def get_ranking():
         """)
         
         results = cursor.fetchall()
-        ranking = [RankingEntry(username=row[0], total_score=row[1]) for row in results]
+        ranking: List[RankingEntry] = [RankingEntry(username=row[0], total_score=row[1]) for row in results]
 
-        response = RankingResponse(ranking=ranking)
-        return response
+        return RankingResponse(ranking=ranking)
     
     except mariadb.Error as e:
         raise HTTPException(status_code=500, detail=str(e))

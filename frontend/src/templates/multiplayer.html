@@ -21,22 +21,49 @@
             max-width: 500px;
         }
         h1 { font-size: 2rem; margin-bottom: 2rem; color: #333; }
-        .mode-button {
-            display: inline-block;
-            width: 85%;
-            margin: 0.5rem;
-            padding: 1.2rem 1rem;
-            border-radius: 25px;
-            font-weight: bold;
-            font-size: 1.2rem;
-            color: white;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            cursor: pointer;
+        .mode-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
         }
-        .judge-button { background: linear-gradient(135deg, #1abc9c, #16a085); }
-        .player-button { background: linear-gradient(135deg, #3498db, #2980b9); }
-        .mode-button:hover { transform: scale(1.05); }
+        
+        .mode-button {
+            display: block;
+            padding: 1.5rem 2rem;
+            text-decoration: none;
+            border-radius: 15px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        
+        .mode-a-button {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            box-shadow: 0 8px 20px rgba(255, 107, 107, 0.3);
+        }
+        
+        .mode-a-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(255, 107, 107, 0.4);
+        }
+        
+        .mode-b-button {
+            background: linear-gradient(135deg, #4834d4, #686de0);
+            color: white;
+            box-shadow: 0 8px 20px rgba(72, 52, 212, 0.3);
+        }
+        
+        .mode-b-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(72, 52, 212, 0.4);
+        }
 
         /* Modale */
         .overlay {
@@ -95,19 +122,25 @@
             color: white;
             margin-top: 0.3rem;
         }
+        .mode-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1>🎮 Multiplayer - Scegli il tuo ruolo</h1>
-    <div>
-        <div class="mode-button judge-button" onclick="createJudgeSession()">
+    <div class="mode-buttons">
+        <div class="mode-button mode-a-button" onclick="createJudgeSession()">
             👤 JUDGE
             <div class="mode-description">Crea una nuova partita come giudice</div>
         </div>
 
-        <div class="mode-button player-button" onclick="openModal()">
+        <div class="mode-button mode-b-button" onclick="openModal()">
             👤 PLAYER
             <div class="mode-description">Unisciti a una partita come giocatore</div>
         </div>

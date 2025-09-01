@@ -9,16 +9,24 @@ from services.game.answers import create_answer
 from services.llm.generate_answer import get_llm_response
 from services.instances.manager import manager
 
+def create_question(request: QuestionRequest) -> QuestionResponse:
+    """
+    Salva una domanda nel database, calcola l'embedding e restituisce il record.
 
-def create_question(request: QuestionRequest):
+    Args
+        request (QuestionRequest): Dati della domanda da salvare.
+
+    Returns
+        QuestionResponse: Record della domanda appena creata (senza embedding).
+    """
     conn = create_db_connection()
     cursor = conn.cursor()
-    model = get_model()  # carichi il modello solo una volta (lazy loading)
+    model = get_model()  # carica il modello una volta (lazy loading)
     
     try:
         # 1. Calcolo embedding della domanda
         embedding = model.encode(request.text).tolist()
-        embedding_json = json.dumps(embedding)  # serializzo in stringa JSON
+        embedding_json = json.dumps(embedding)  # serializzo in JSON
 
         # 2. Inserisco domanda + embedding
         cursor.execute("""
@@ -36,7 +44,7 @@ def create_question(request: QuestionRequest):
 
         question_id = cursor.lastrowid
 
-        # 3. Ritorno la domanda creata (senza embedding per non appesantire la response)
+        # 3. Recupera la domanda appena creata (senza embedding)
         cursor.execute("""
             SELECT id, session_id, text, author_user_id, room_name, created_at
             FROM questions
@@ -59,32 +67,3 @@ def create_question(request: QuestionRequest):
     finally:
         cursor.close()
         conn.close()
-
-  
-#Gestione caso domanda automatica in singleplayer
-async def process_auto_question(room_name, websocket, question, session_id):
-    q_req = QuestionRequest(
-        text=question,
-        room_name=room_name,
-        author_user_id=None,
-        author_type="BOT",
-        session_id=session_id
-    )
-    saved_q = create_question(q_req)
-
-     #Ivia domanda ai player (Uno è il giocatore l'altro è il bot)
-    await manager.send_question_to_players(question, room_name, saved_q.id)
-
-    #Risposta del bot alla domanda del ULLM
-    bot_resp = await get_llm_response(question)
-    create_answer(AnswerRequest(
-        question_id=saved_q.id,
-        session_id=session_id,
-        text=bot_resp,
-        author_user_id=None,
-        author_type="BOT",
-        room_name=room_name
-    ))
-    await manager.send_answer_to_judge(bot_resp, room_name, "BOT")
-    print(f"🤖 BOT-AUTO answer sent: {bot_resp}")
-    

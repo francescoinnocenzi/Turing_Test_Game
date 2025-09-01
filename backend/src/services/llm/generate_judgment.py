@@ -2,9 +2,22 @@
 from database.connection import create_db_connection
 import requests
 from schemas.judgment import LLMJudgmentResponse
+from typing import Union
 
-async def get_llm_judgment(session_id: int):
-    """Fa decidere all'LLM chi è HUMAN e chi è BOT basandosi sulle risposte della sessione"""
+async def get_llm_judgment(session_id: int) -> Union["LLMJudgmentResponse", dict]:
+    """
+    Fa decidere all'LLM chi è HUMAN e chi è BOT basandosi sulle risposte della sessione.
+
+    Args
+        session_id (int): ID della sessione per cui valutare le risposte.
+
+    Returns
+        LLMJudgmentResponse: Oggetto con il risultato del giudizio LLM e stato HUMAN.
+        dict: In caso di errore, ritorna un dizionario con chiave "error" e messaggio.
+
+    Raises
+        Exception: Qualsiasi errore durante la lettura dal DB o la chiamata all'LLM.
+    """
     try:
         # Recupera tutte le domande e risposte per questa sessione
         conn = create_db_connection()

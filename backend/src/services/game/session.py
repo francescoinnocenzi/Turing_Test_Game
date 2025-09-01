@@ -10,9 +10,25 @@ import mariadb
 import services.state as state
 from schemas.session import SessionResponse, AvailableSessionsResponse, SessionInfo
 
-async def create_session(response: Response, request: Request,backend: InMemoryBackend[UUID, SessionData], session_uuid: UUID):
+async def create_session(response: Response, request: Request,backend: InMemoryBackend[UUID, SessionData], session_uuid: UUID) -> SessionResponse:
 
-    print("📦 Stato backend inizio create session: %s", backend.data)
+    """
+    Crea una nuova sessione di gioco e una stanza univoca.
+
+    Args
+        response (Response): Oggetto FastAPI Response per eventuali intestazioni.
+        request (Request): Oggetto FastAPI Request contenente i dati della richiesta.
+        backend (InMemoryBackend[UUID, SessionData]): Backend di sessione in memoria.
+        session_uuid (UUID): UUID della sessione corrente.
+
+    Returns
+        SessionResponse: Dati della nuova sessione creata, incluso room_name e ID DB.
+
+    Raises
+        HTTPException: In caso di modalità non valida, nome stanza duplicato o errori DB.
+    """
+
+    print("Stato backend inizio create session: %s", backend.data)
     data = await request.json()
     mode = data.get("mode", "NULL") 
     print("➡️ Sono in create_session, mode scelto:", mode)
@@ -24,9 +40,6 @@ async def create_session(response: Response, request: Request,backend: InMemoryB
     cursor = conn.cursor()
     import uuid
     try:
-        # usa room_name scelto dall’utente
-        # room_name = req.room_name.strip()
-
         # genera un nome univoco della stanza
         room_name = f"room_{uuid.uuid4().hex[:6]}"
         #mode
@@ -75,7 +88,22 @@ async def create_session(response: Response, request: Request,backend: InMemoryB
         cursor.close()
         conn.close()
 
-async def join_session(room_name: str, backend: InMemoryBackend[UUID, SessionData], session_uuid: UUID = Depends(cookie)):
+async def join_session(room_name: str, backend: InMemoryBackend[UUID, SessionData], session_uuid: UUID = Depends(cookie)) -> SessionResponse:
+    """
+    Permette a un giocatore di unirsi a una sessione multiplayer esistente.
+
+    Args
+        room_name (str): Nome della stanza da unirsi.
+        backend (InMemoryBackend[UUID, SessionData]): Backend di sessione in memoria.
+        session_uuid (UUID): UUID della sessione del player.
+
+    Returns
+        SessionResponse: Informazioni aggiornate sulla sessione del giocatore.
+
+    Raises
+        HTTPException: Se la stanza non esiste o la sessione utente non viene trovata.
+    """
+
     conn = create_db_connection()
     cursor = conn.cursor()
     try:
@@ -111,7 +139,14 @@ async def join_session(room_name: str, backend: InMemoryBackend[UUID, SessionDat
         cursor.close()
         conn.close()
 
-async def available_sessions():
+async def available_sessions() -> AvailableSessionsResponse:
+    """
+    Restituisce la lista delle sessioni multiplayer ancora disponibili.
+    Pulisce automaticamente le stanze vecchie (>2 minuti).
+    
+    Returns
+        AvailableSessionsResponse: Lista di stanze disponibili.
+    """
     conn = create_db_connection()
     cursor = conn.cursor()
     try:
@@ -147,6 +182,17 @@ async def available_sessions():
         conn.close()
     
 async def setup_session(websocket: WebSocket, cookie: CookieParameters, backend: InMemoryBackend[UUID, SessionData]):
+    """
+    Verifica la sessione del player dal cookie e ritorna session_id e user_id.
+
+    Args
+        websocket (WebSocket): Connessione WebSocket del client.
+        cookie (CookieParameters): Funzione per estrarre il cookie della sessione.
+        backend (InMemoryBackend[UUID, SessionData]): Backend in memoria per le sessioni.
+
+    Returns
+        Tuple[Optional[int], Optional[int]]: session_id e user_id, None se non trovati.
+    """
     try:
         session_uuid = cookie(websocket)
         print(f"✅ Session UUID verificato: {session_uuid}")

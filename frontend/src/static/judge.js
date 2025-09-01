@@ -21,7 +21,7 @@ function setupWebSocket(roomName) {
     ws.onopen = () => {
         document.getElementById("room-id").textContent = roomName;
         document.getElementById("ws-id").textContent = clientId;
-        console.log("✅ Connesso come JUDGE");
+        console.log("Connesso come JUDGE");
     };
 
     let pendingAnswers = [];
@@ -81,7 +81,7 @@ function setupWebSocket(roomName) {
                     showResultModal(judgeResult, 'single', 'judge');
                 }
             }else if (data.type === "all_answered") {//DA SISTEMARE
-                console.log("✅ Tutti i player hanno risposto!");
+                console.log("Tutti i player hanno risposto!");
 
                 console.log(pendingAnswers);
 
@@ -114,7 +114,7 @@ function setupWebSocket(roomName) {
                 // Notifica visiva
                 const notification = document.createElement('div');
                 notification.classList.add('notification');
-                notification.textContent = "✅ " + data.message;
+                notification.textContent = " " + data.message;
                 document.querySelector('.container').appendChild(notification);
 
                 // Aggiungi un separatore nelle chat
@@ -137,7 +137,7 @@ function setupWebSocket(roomName) {
             }
 
         } catch (err) {
-            console.error("❌ Errore parsing messaggio:", err);
+            console.error("Errore parsing messaggio:", err);
         }
     };
 }
@@ -151,25 +151,22 @@ function sendQuestion() {
 
     // Aggiungi la domanda nelle due chat PRIMA di inviarla (in modo che le risposte appaiano sotto)
     questionCounter += 1;
-    const qid = `q-${Date.now()}-${questionCounter}`;
-    lastQuestion = { id: qid, text };
+    lastQuestion = { text };
 
     const qLi1 = document.createElement('li');
     qLi1.className = 'question-item';
     qLi1.textContent = `Domanda: ${text}`;
-    qLi1.setAttribute('data-qid', qid);
     document.getElementById('messagesA').appendChild(qLi1);
 
     const qLi2 = document.createElement('li');
     qLi2.className = 'question-item';
     qLi2.textContent = `Domanda: ${text}`;
-    qLi2.setAttribute('data-qid', qid);
     document.getElementById('messagesB').appendChild(qLi2);
 
     scrollAllChats(); 
 
     // Invia la domanda al server (includiamo un qid nel payload)
-    const msg = { type: "question", text: text, qid: qid };
+    const msg = { type: "question", text: text };
     ws.send(JSON.stringify(msg));
     console.log("📨 Domanda inviata:", text);
 
@@ -218,7 +215,7 @@ function submitJudgment() {
 window.submitJudgment = submitJudgment;
 
 
-// ✅ NUOVA FUNZIONE: Chiudi modale
+// NUOVA FUNZIONE: Chiudi modale
 function closeResultModal() {
     if (window.currentModal) {
         window.currentModal.remove();

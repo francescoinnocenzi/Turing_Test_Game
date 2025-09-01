@@ -12,7 +12,21 @@ import services.state as state
 
 
 
-async def login(login_request: LoginRequest, response: Response, cookie: SessionCookie):
+async def login(login_request: LoginRequest, response: Response, cookie: SessionCookie) -> LoginResponse:
+    """
+    Effettua il login di un utente tramite username o email e crea una sessione.
+
+    Args
+        login_request (LoginRequest): Contiene l'identificatore (username/email) e la password.
+        response (Response): Oggetto FastAPI per attaccare il cookie di sessione.
+        cookie (SessionCookie): Gestore dei cookie di sessione.
+
+    Returns
+        LoginResponse: Conferma dell'avvenuto login.
+
+    Raises
+        HTTPException: Se l'utente non esiste o la password è errata.
+    """
     conn = create_db_connection()
     cur = conn.cursor()
 

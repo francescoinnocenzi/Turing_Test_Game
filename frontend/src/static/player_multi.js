@@ -8,7 +8,7 @@ let currentQuestionId = null;
 
 let roomName = getRoomNameFromUrl();
 if (!roomName) {
-    alert("⚠️ Nessuna stanza trovata nell’URL!");
+    alert("Nessuna stanza trovata nell’URL!");
     throw new Error("Room non trovata");
 }
 
@@ -19,14 +19,14 @@ document.getElementById("room-id").textContent = roomName;
 const url = `ws://localhost:8003/ws/${roomName}/${clientId}?role=${role}&mode=multi`;
 ws = new WebSocket(url);
 
-ws.onopen = () => console.log(`✅ Connesso come ${role} in modalità multi nella stanza ${roomName}`);
+ws.onopen = () => console.log(`Connesso come ${role} in modalità multi nella stanza ${roomName}`);
 
 ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
     
     // Ricezione domanda
     if(data.type === "question"){
-        console.log("❓ Domanda ricevuta:", data.text);
+        console.log("Domanda ricevuta:", data.text);
         pendingQuestions.push(data.text);
         const qBox = document.getElementById("current-question");
         qBox.textContent = "❓ " + data.text;
@@ -46,7 +46,7 @@ ws.onmessage = (event) => {
 
     // Gioco terminato
     else if(data.type === "final_judgment"){
-        console.log("🏆 Giudizio finale ricevuto:", msg.judgment);
+        console.log("Giudizio finale ricevuto:", msg.judgment);
                 
         const patterns = ["HUMAN ha VINTO", "HUMAN ha PERSO"];
         const humanResult = patterns.find(p => msg.judgment.includes(p));
@@ -82,7 +82,7 @@ document.getElementById("messageForm").addEventListener("submit", (e) => {
             text: answer,
             question_id: currentQuestionId
         }));
-        console.log("📤 Risposta inviata:", answer);
+        console.log("Risposta inviata:", answer);
 
         // reset input
         input.value = "";

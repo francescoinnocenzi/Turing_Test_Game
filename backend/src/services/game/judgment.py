@@ -2,9 +2,16 @@ from schemas.judgment import JudgmentRequest, JudgmentResponse
 from database.connection import create_db_connection
 from fastapi import HTTPException
 import mariadb
+def create_judgment(request: JudgmentRequest) -> JudgmentResponse:
+    """
+    Salva un giudizio nel database e restituisce il record creato.
 
+    Args
+        request (JudgmentRequest): Dati del giudizio da salvare.
 
-def create_judgment(request: JudgmentRequest):
+    Returns
+        JudgmentResponse: Record del giudizio appena creato.
+    """
     conn = create_db_connection()
     cursor = conn.cursor()
 
@@ -13,7 +20,7 @@ def create_judgment(request: JudgmentRequest):
         cursor.execute("""
             INSERT INTO judgments (session_id, judge_id, chosen_player_human)
             VALUES (?, ?, ?)
-        """, (request.session_id, request.judge_id, request.chosen_player_human, ))
+        """, (request.session_id, request.judge_id, request.chosen_player_human))
         conn.commit()
 
         judgment_id = cursor.lastrowid

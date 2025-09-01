@@ -17,21 +17,21 @@ function setupWebSocket(selectedRoom) {
     }
 
     const url = `ws://localhost:8003/ws/${selectedRoom}/${clientId}?role=HUMAN&mode=${mode}`;
-    console.log("🔌 Connessione a:", url);
+    console.log("Connessione a:", url);
 
     ws = new WebSocket(url);
 
     ws.onopen = () => {
-        console.log(`✅ Connesso come HUMAN in modalità ${mode}, stanza: ${selectedRoom}`);
+        console.log(`Connesso come HUMAN in modalità ${mode}, stanza: ${selectedRoom}`);
         document.getElementById("room-id").textContent = `${selectedRoom.toUpperCase()} - ${mode.toUpperCase()}`;
     };
 
     ws.onerror = (e) => {
-        console.error("❌ Errore WebSocket:", e);
+        console.error("Errore WebSocket:", e);
     };
 
     ws.onclose = (evt) => {
-        console.warn("⚠️ WS chiuso:", evt);
+        console.warn("WS chiuso:", evt);
     };
 
     ws.onmessage = (event) => {
@@ -60,13 +60,8 @@ function setupWebSocket(selectedRoom) {
                 setTimeout(() => {
                     questionDiv.className = "current-question";
                 }, 2000);
-            } else if(msg.type == "question_new"){
-                // const input = document.getElementById("messageText");
-                // input.disabled = false;
-                // input.placeholder = "💬 Scrivi la risposta qui..."
-
             } else if (msg.type === "final_judgment") {
-                console.log("🏆 Giudizio finale ricevuto:", msg.judgment);
+                console.log("Giudizio finale ricevuto:", msg.judgment);
             
                 const patterns = ["HUMAN ha VINTO", "HUMAN ha PERSO"];
                 const humanResult = patterns.find(p => msg.judgment.includes(p));
@@ -142,7 +137,7 @@ function sendMessage(event) {
 
 
 
-// ✅ NUOVA FUNZIONE: Chiudi modale
+// NUOVA FUNZIONE: Chiudi modale
 function closeResultModal() {
     if (window.currentModal) {
         window.currentModal.remove();

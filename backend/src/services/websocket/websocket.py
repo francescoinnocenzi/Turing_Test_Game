@@ -15,6 +15,18 @@ class ConnectionManager:
         # }
 
     async def connect(self, room_name: str, websocket: WebSocket, client_id: int, role: str):
+        """
+        Accetta una nuova connessione WebSocket.
+
+        Args
+            room_name (str): Il nome della stanza a cui ci si sta connettendo.
+            websocket (WebSocket): L'oggetto WebSocket per la connessione.
+            client_id (int): L'ID del client che si sta connettendo.
+            role (str): Il ruolo del client (es. "HUMAN", "BOT").
+        
+        Returns
+            None
+        """
         # Accetta una nuova connessione WebSocket
         print(f"STARTING CONNECTION: room={room_name}, client={client_id}")
         await websocket.accept()
@@ -37,6 +49,16 @@ class ConnectionManager:
         print(f"ROOMS STATE: {[(r, list(clients.keys())) for r, clients in self.rooms.items()]}")
 
     def disconnect(self, room_name: str, client_id: int):
+        """
+        Gestisce la disconnessione di un client da una stanza.
+
+        Args
+            room_name (str): Il nome della stanza da cui ci si sta disconnettendo.
+            client_id (int): L'ID del client che si sta disconnettendo.
+
+        Returns
+            None
+        """
         if room_name in self.rooms and client_id in self.rooms[room_name]:
             # Rimuove una connessione disconnessa dal dizionario
             self.rooms[room_name].pop(client_id, None)
@@ -47,15 +69,18 @@ class ConnectionManager:
         
         print(f"DISCONNECT - Client {client_id} disconnected from {room_name}")
 
-    async def send_personal_message(self, message: str, room_name: str, client_id: int):
-        # Get restituisce valore associato alla chiave, quindi la websocket associata ad un client_id
-        client_data = self.rooms.get(room_name, {}).get(client_id)  # CORRETTO
-
-        if client_data:
-            # Invia un messaggio solo al client specificato
-            await client_data["ws"].send_text(message)
         
     async def broadcast(self, message: str, room_name: str):
+        """
+        Invia un messaggio a tutti i client connessi nella stanza specificata.
+
+        Args
+            message (str): Il messaggio da inviare.
+            room_name (str): Il nome della stanza a cui inviare il messaggio.
+
+        Returns
+            None
+        """
         print(f'BROADCAST to {room_name}: {message}')
         # Invia un messaggio a tutti i client connessi nella room
         broadcast_message = json.dumps({
@@ -66,7 +91,17 @@ class ConnectionManager:
             await client_data["ws"].send_text(broadcast_message)
 
     async def send_question_to_players(self, question: str, room_name: str, question_id: int):
-        """Invia una domanda dal giudice a tutti i player nella stanza"""
+        """
+        Invia una domanda dal giudice a tutti i player nella stanza
+
+        Args
+            question (str): La domanda da inviare.
+            room_name (str): Il nome della stanza a cui inviare la domanda.
+            question_id (int): L'ID della domanda.
+
+        Returns
+            None
+        """
         room = self.rooms.get(room_name, {})
         message = json.dumps({
             "type": "question", 
@@ -87,7 +122,17 @@ class ConnectionManager:
         print(f"Question sent to {sent_count} players")
 
     async def send_answer_to_judge(self, answer: str, room_name: str, player_role: int):
-        """Invia una risposta dal player al giudice"""
+        """
+        Invia una risposta dal player al giudice
+
+        Args
+            answer (str): La risposta da inviare.
+            room_name (str): Il nome della stanza da cui inviare la risposta.
+            player_role (int): Il ruolo del player che invia la risposta.
+
+        Returns
+            None
+        """
         # Trova tutti i client con ruolo JUDGE nella room
         for client_id, client_data in self.rooms.get(room_name, {}).items():
             if client_data["role"] == "JUDGE":
@@ -106,6 +151,13 @@ class ConnectionManager:
     async def send_positions_to_judge(self, room_name: str, positions: dict):
         """
         Invia al judge la mappatura delle posizioni dei player
+
+        Args
+            room_name (str): Il nome della stanza a cui inviare le posizioni.
+            positions (dict): Un dizionario contenente le posizioni dei player.
+
+        Returns
+            None
         """
        
         # Trova tutti i client con ruolo JUDGE nella room
@@ -123,7 +175,16 @@ class ConnectionManager:
                     print(f"Error sending to judge: {e}")
                     
     async def send_to_judge(self, message: dict, room_name: str):
-        """Invia un messaggio al giudice"""
+        """
+        Invia un messaggio al giudice
+
+        Args
+            message (dict): Il messaggio da inviare.
+            room_name (str): Il nome della stanza a cui inviare il messaggio.
+
+        Returns
+            None
+        """
         # Trova tutti i client con ruolo JUDGE nella room
         for client_id, client_data in self.rooms.get(room_name, {}).items():
             if client_data["role"] == "JUDGE":
@@ -132,10 +193,18 @@ class ConnectionManager:
                     print(f"Message sent to judge (client {client_id})")
                 except Exception as e:
                     print(f"Error sending to judge: {e}")
-    # ...existing code...
 
     async def send_judgment_to_all(self, judgment: str, room_name: str):
-        """Invia il giudizio finale a tutti i client nella room"""
+        """
+        Invia il giudizio finale a tutti i client nella room
+
+        Args
+            judgment (str): Il giudizio finale da inviare.
+            room_name (str): Il nome della stanza a cui inviare il giudizio.
+
+        Returns
+            None
+        """
         room = self.rooms.get(room_name, {})
         message = json.dumps({
             "type": "final_judgment",
@@ -152,7 +221,17 @@ class ConnectionManager:
                 print(f"Error sending judgment to client {client_id}: {e}")
     
     async def send_message_to_all(self, message: str, message_type: str, room_name: str):
-        """Invia messaggio a tutti i client nella room"""
+        """
+        Invia messaggio a tutti i client nella room
+
+        Args
+            message (str): Il messaggio da inviare.
+            message_type (str): Il tipo di messaggio da inviare.
+            room_name (str): Il nome della stanza a cui inviare il messaggio.
+
+        Returns
+            None
+        """
         room = self.rooms.get(room_name, {})
         message = json.dumps({
             "type": f"{message_type}",

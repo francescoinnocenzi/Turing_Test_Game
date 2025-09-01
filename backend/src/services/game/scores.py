@@ -1,8 +1,20 @@
 from database.connection import create_db_connection
 
-def handle_scores(user_id: int, session_id: int, mode: str, role : str, win: bool):
-    """Aggiorna i punteggi dei giocatori in base al risultato della partita"""
-    print(f"🏆 Aggiorno punteggi per User {user_id}, Session {session_id}, Mode {mode}, Role {role}, Win {win}")
+def handle_scores(user_id: int, session_id: int, mode: str, role : str, win: bool) -> None:
+    """
+    Aggiorna i punteggi dei giocatori in base al risultato della partita.
+
+    Args
+        user_id (int): ID dell'utente che ha effettuato l'azione (giudice o player).
+        session_id (int): ID della sessione di gioco corrente.
+        mode (str): Modalità di gioco, "single" o "multi".
+        role (str): Ruolo dell'utente ("HUMAN" o "JUDGE").
+        win (bool): Indica se il ruolo specificato ha vinto la partita.
+
+    Raises
+        ValueError: Se ci sono incongruenze nei ruoli o modalità sconosciute.
+    """
+    print(f"Aggiorno punteggi per User {user_id}, Session {session_id}, Mode {mode}, Role {role}, Win {win}")
     conn = create_db_connection()
     cursor = conn.cursor()
 
@@ -49,7 +61,7 @@ def handle_scores(user_id: int, session_id: int, mode: str, role : str, win: boo
             """, (player_user_id, session_id, human_score, mode, "HUMAN")) #il player è sempre umano in multiplayer
             conn.commit()
 
-            print(f"✅ Punteggi aggiornati: User {player_user_id}, Session {session_id}, Score {human_score}, Mode {mode}, Role HUMAN")
+            print(f"Punteggi aggiornati: User {player_user_id}, Session {session_id}, Score {human_score}, Mode {mode}, Role HUMAN")
         elif mode == "SINGLEPLAYER":
             score = 0 #punteggio dell'unico giocatore
             if role == "JUDGE" and win:
@@ -71,7 +83,7 @@ def handle_scores(user_id: int, session_id: int, mode: str, role : str, win: boo
             print("Errore Aggiornamento Punteggi: Modalità sconosciuta")
             raise ValueError("Modalità sconosciuta")    
         
-        print(f"✅ Punteggi aggiornati: User {user_id}, Session {session_id}, Score {judge_score}, Mode {mode} , Role JUDGE")
+        print(f"Punteggi aggiornati: User {user_id}, Session {session_id}, Score {judge_score}, Mode {mode} , Role JUDGE")
 
     except Exception as e:
         conn.rollback()

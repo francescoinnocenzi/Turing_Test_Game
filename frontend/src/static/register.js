@@ -37,7 +37,7 @@ form.addEventListener("submit", async (e) => {
             );
 
         msg.className = "msg ok";
-        msg.textContent = "Registrazione completata! ✅";
+        msg.textContent = "Registrazione completata!";
         msg.style.display = "block";
 
         // opzionale: redirect automatico al login

@@ -1,7 +1,16 @@
 from sentence_transformers import SentenceTransformer
-model = None
+from typing import Optional
 
-def get_model():
+model: Optional[SentenceTransformer] = None
+
+def get_model() -> SentenceTransformer:
+    """
+    Restituisce un'istanza del modello SentenceTransformer.
+    Carica il modello solo la prima volta (lazy loading).
+    
+    Returns
+        SentenceTransformer: Modello di embedding testuale.
+    """
     global model
     if model is None:
         model = SentenceTransformer("nickprock/sentence-bert-base-italian-uncased")

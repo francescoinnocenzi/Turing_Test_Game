@@ -26,7 +26,7 @@ export function createSession(bottone, mode, page) {
             if (response.ok) {
                 const data = await response.json();
 
-                console.log("✅ Sessione creata:", data);
+                console.log(" Sessione creata:", data);
 
                 // 👉 Passo il room_name come query param
                 window.location.href =

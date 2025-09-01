@@ -3,7 +3,19 @@ from database.connection import create_db_connection
 from fastapi import HTTPException
 import bcrypt
 
-def register(register_request: RegisterRequest):
+def register(register_request: RegisterRequest) -> RegisterResponse:
+    """
+    Registra un nuovo utente nel database.
+
+    Args
+        register_request (RegisterRequest): Dati dell'utente da registrare
+
+    Returns
+        RegisterResponse: Conferma dell'avvenuta registrazione.
+    
+    Raises
+        HTTPException: Se si verifica un errore durante l'inserimento nel database.
+    """
     conn = create_db_connection()
     cur = conn.cursor()
 
@@ -12,11 +24,15 @@ def register(register_request: RegisterRequest):
     password = register_request.password
 
     try:
-        password = register_request.password.encode("utf-8")
-        hashed = bcrypt.hashpw(password, bcrypt.gensalt())
+        # Hash della password
+        password_bytes = password.encode("utf-8")
+        hashed = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
 
-        cur.execute("INSERT INTO users (username, password_hash, email) VALUES (%s, %s, %s)",(username, hashed.decode("utf-8"), email))
-
+        # Inserimento utente nel DB
+        cur.execute(
+            "INSERT INTO users (username, password_hash, email) VALUES (%s, %s, %s)",
+            (username, hashed.decode("utf-8"), email)
+        )
         conn.commit()
 
         return RegisterResponse(status="ok")

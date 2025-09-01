@@ -6,23 +6,39 @@ from services.instances.manager import manager
 from database.connection import create_db_connection
 import services.state as state
 
-async def check_all_answered(question_id: int, room_name: str, session_id: int, role: str, mode: str):
-    """Verifica se tutti i player hanno risposto alla domanda"""
+from typing import Any
+
+async def check_all_answered(question_id: int, room_name: str, session_id: int, role: str, mode: str) -> None:
+    """
+    Notifica il giudice quando tutti i player hanno risposto e, se necessario,
+    genera automaticamente la prossima domanda in modalità single.
+
+    Args
+        question_id (int): ID della domanda corrente.
+        room_name (str): Nome della stanza.
+        session_id (int): ID della sessione.
+        role (str): Ruolo del player (es. 'HUMAN', 'JUDGE').
+        mode (str): Modalità di gioco ('single' o 'multi').
+
+    Returns
+        None
+
+    Raises:
+        Exception: Propaga eventuali errori generati durante l'accesso al database
+          o nell'invio dei messaggi tramite WebSocket.
+    """
     try:
         conn = create_db_connection()
         cursor = conn.cursor()
 
-        # Conta domande per questa sessione
-        cursor.execute("""
-            SELECT COUNT(*) FROM questions 
-            WHERE session_id = ?
-        """, (session_id,))
-
+        # Conta le domande per la sessione
+        cursor.execute("SELECT COUNT(*) FROM questions WHERE session_id = ?", (session_id,))
         question_count = cursor.fetchone()[0]
-        MAX_QUESTIONS = 1  # Configurabile
 
+        MAX_QUESTIONS = 1  # Configurabile
         await check_and_finalize_game(session_id, room_name, question_count, MAX_QUESTIONS, role, mode)
-        
+
+        # Conta risposte per la domanda corrente
         cursor.execute("""
             SELECT COUNT(*) as total_answers,
                    COUNT(CASE WHEN author_type = 'HUMAN' THEN 1 END) as human_answers,
@@ -31,31 +47,45 @@ async def check_all_answered(question_id: int, room_name: str, session_id: int, 
             WHERE question_id = ?
         """, (question_id,))
         
-        result = cursor.fetchone()
-        total_answers, human_answers, bot_answers = result
-        
+        total_answers, human_answers, bot_answers = cursor.fetchone()
         print(f"Risposte ricevute: {total_answers}/2 (Human: {human_answers}, Bot: {bot_answers})")
-        
+
         if total_answers >= 2:  # Entrambi hanno risposto
-            print("✅ Tutti hanno risposto!")
+            print("Tutti hanno risposto!")
             await manager.send_to_judge({ 
                 "type": "all_answered", 
-                "message": "✅ Tutti hanno risposto! Puoi inviare la prossima domanda." 
-                }, room_name)
-            
+                "message": "Tutti hanno risposto! Puoi inviare la prossima domanda." 
+            }, room_name)
+
             if role == "HUMAN" and mode == "single" and question_count < MAX_QUESTIONS:
                 await auto_generate_next_question(room_name, session_id)
-            
+
         cursor.close()
         conn.close()
-        
+
     except Exception as e:
         print(f"Errore in check_all_answered: {e}")
 
-async def check_and_finalize_game(session_id: int, room_name: str, question_count: int, max_questions: int, role: str, mode: str):
+
+async def check_and_finalize_game(session_id: int, room_name: str, question_count: int, max_questions: int, role: str, mode: str) -> None:
     """
-    Controlla se il numero massimo di domande è stato raggiunto
-    e in caso affermativo esegue il giudizio finale e chiude la partita.
+    Controlla se il numero massimo di domande è stato raggiunto e, se sì,
+    esegue il giudizio finale e notifica i giocatori.
+
+    Args
+        session_id (int): ID della sessione corrente.
+        room_name (str): Nome della stanza.
+        question_count (int): Numero di domande già poste.
+        max_questions (int): Numero massimo di domande per la sessione.
+        role (str): Ruolo dell'utente ('HUMAN' o 'JUDGE').
+        mode (str): Modalità di gioco ('single' o 'multi').
+
+    Returns
+        None
+
+    Raises
+        HTTPException: Se i risultati del giudizio LLM non sono validi.
+        Exception: Propaga altri errori generici durante l'invio dei messaggi.
     """
     if question_count >= max_questions:
 
@@ -65,10 +95,10 @@ async def check_and_finalize_game(session_id: int, room_name: str, question_coun
 
             #Aggiusto punteggi
             if judgment_result.human_result == "HUMAN ha PERSO":
-                print(f"✅ GIUDICE LLM ha indovinato con user {state.user_id}")
+                print(f"GIUDICE LLM ha indovinato con user {state.user_id}")
                 handle_scores(user_id= state.user_id, session_id=session_id, mode="single",role=role, win=True) 
             elif judgment_result.human_result == "HUMAN ha VINTO":
-                print(f"✅ GIUDICE LLM ha sbagliato con user {state.user_id}")
+                print(f"GIUDICE LLM ha sbagliato con user {state.user_id}")
                 handle_scores(user_id= state.user_id, session_id=session_id, mode="single",role=role, win=False)
             else:
                 raise HTTPException(status_code=500, detail="Errore nei punteggi del giudizio LLM")

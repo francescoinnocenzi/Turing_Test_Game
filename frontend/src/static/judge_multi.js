@@ -97,25 +97,22 @@ function sendQuestion() {
 
     // Aggiungi la domanda nelle due chat PRIMA di inviarla (in modo che le risposte appaiano sotto)
     questionCounter += 1;
-    const qid = `q-${Date.now()}-${questionCounter}`;
-    lastQuestion = { id: qid, text };
+    lastQuestion = { text };
 
     const qLi1 = document.createElement("li");
     qLi1.className = "question-item";
     qLi1.textContent = `Domanda: ${text}`;
-    qLi1.setAttribute("data-qid", qid);
     document.getElementById("messagesA").appendChild(qLi1);
 
     const qLi2 = document.createElement("li");
     qLi2.className = "question-item";
     qLi2.textContent = `Domanda: ${text}`;
-    qLi2.setAttribute("data-qid", qid);
     document.getElementById("messagesB").appendChild(qLi2);
 
     scrollAllChats();
 
     // Invia la domanda al server (includiamo un qid nel payload)
-    const msg = { type: "question", text: text, qid: qid };
+    const msg = { type: "question", text: text };
     ws.send(JSON.stringify(msg));
     console.log("📨 Domanda inviata:", text);
 

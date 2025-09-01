@@ -16,8 +16,20 @@ from schemas.api_models import SimilarityResponse
 state.chat_history = [] # list[dict]
 
 # Funzione per ottenere risposta dal LLM
-async def get_llm_response(question: str):
-    """Funzione che chiama l'API LLM per ottenere una risposta alla domanda"""
+async def get_llm_response(question: str) -> str:
+    """
+    Ottiene una risposta dal modello LLM data una domanda.
+
+    Args
+        question (str): La domanda da inviare al modello.
+
+    Returns
+        str: La risposta generata dal modello.
+
+    Notes
+        Se si verifica un errore, restituisce una risposta di fallback.
+    """
+    
     request_data = RequestAPI(question=question)
     try:
         response = ask_with_memory(request_data)
@@ -26,7 +38,19 @@ async def get_llm_response(question: str):
         print(f"❌ Errore nella chiamata a LLM: {e}")
         return "Mi dispiace, non ho capito la domanda."
 
-def ask_with_memory(request: RequestAPI):
+def ask_with_memory(request: RequestAPI) -> ResponseAPI:
+    """
+    Gestisce la chat con il modello LLM mantenendo la cronologia delle conversazioni.
+
+    Args
+        request (RequestAPI): Oggetto contenente la domanda da inviare al modello.
+
+    Returns
+        ResponseAPI: Oggetto contenente la risposta e la chat history aggiornata.
+
+    Raises
+        HTTPException: Se la chiamata all'API del modello fallisce.
+    """
 
     state.chat_history.append({"role": "user", "content": request.question})
 
@@ -69,7 +93,22 @@ def ask_with_memory(request: RequestAPI):
         raise HTTPException(status_code=500, detail=f"Errore durante richiesta post {e}")
 
 
-async def trova_simile(request: QuestionRequest):
+async def trova_simile(request: QuestionRequest) -> SimilarityResponse:
+    """
+    Trova la risposta più simile ad una domanda già presente nel database,
+    altrimenti genera una nuova risposta con l'LLM.
+
+    Args
+        request (QuestionRequest): Oggetto contenente la nuova domanda e l'ID della sessione.
+
+    Returns
+        SimilarityResponse: Risultato con la frase più simile (se trovata),
+                            la risposta associata (umana o LLM),
+                            il punteggio di similarità e il tipo di risposta.
+
+    Raises
+        HTTPException: Se si verifica un errore di database.
+    """
     model = get_model()  # modello caricato solo alla prima chiamata
     conn = create_db_connection()
     cursor = conn.cursor()

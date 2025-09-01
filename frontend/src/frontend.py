@@ -1,8 +1,7 @@
 from fastapi import FastAPI, Request, Form, HTTPException
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-import requests
-from pydantic import BaseModel
 
 app = FastAPI()
 
@@ -14,66 +13,85 @@ templates = Jinja2Templates(directory="templates")
 
 API_URL = "http://backend:8003"
 
-class AskRequest(BaseModel):
-    question: str
-
 # Endpoint GET per servire la pagina HTML iniziale
-@app.get("/")
-async def get(request: Request):
+@app.get("/", response_class=HTMLResponse)
+async def get(request: Request) -> HTMLResponse:
     # Restituisce il template HTML (index.html) con la variabile "request"
     return templates.TemplateResponse("login.html", {"request": request})
 
-@app.get("/index")
-async def get(request: Request):
-    # Restituisce il template HTML (index.html) con la variabile "request"
+# Pagina di login (default)
+@app.get("/", response_class=HTMLResponse)
+async def get_root(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse("login.html", {"request": request})
+
+
+# Index
+@app.get("/index", response_class=HTMLResponse)
+async def get_index(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("index.html", {"request": request})
 
-@app.get("/login")
-async def get_login(request: Request):
+
+# Login
+@app.get("/login", response_class=HTMLResponse)
+async def get_login(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("login.html", {"request": request})
 
-@app.get("/register")
-async def get_register(request: Request):
+
+# Register
+@app.get("/register", response_class=HTMLResponse)
+async def get_register(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("register.html", {"request": request})
 
+
 # Modalità singleplayer
-@app.get("/singleplayer")
-async def get_singleplayer(request: Request):
+@app.get("/singleplayer", response_class=HTMLResponse)
+async def get_singleplayer(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("singleplayer.html", {"request": request})
 
-@app.get("/multiplayer")
-async def get_multiplayer(request: Request):
+
+# Modalità multiplayer
+@app.get("/multiplayer", response_class=HTMLResponse)
+async def get_multiplayer(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("multiplayer.html", {"request": request})
 
+
 # Modalità singleplayer - Judge
-@app.get("/single/judge")
-async def get_single_judge(request: Request):
-    # Per ora reindirizza alla pagina giudice esistente
+@app.get("/single/judge", response_class=HTMLResponse)
+async def get_single_judge(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("judge.html", {"request": request, "mode": "single"})
 
+
 # Modalità singleplayer - Human
-@app.get("/single/human")
-async def get_single_human(request: Request):
-    # Per ora reindirizza alla pagina player esistente
+@app.get("/single/human", response_class=HTMLResponse)
+async def get_single_human(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("player.html", {"request": request, "mode": "single_human"})
 
 
-@app.get("/judge")
-async def get_judge(request: Request):
-    # Restituisce il template HTML (judge.html) con la variabile "request"
+# Judge multiplayer
+@app.get("/judge", response_class=HTMLResponse)
+async def get_judge(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("judge.html", {"request": request, "mode": "multi"})
 
-@app.get("/player")
-async def get_player(request: Request):
-    # Restituisce il template HTML (player.html) con la variabile "request"
+
+# Player multiplayer
+@app.get("/player", response_class=HTMLResponse)
+async def get_player(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("player.html", {"request": request, "mode": "multi"})
-@app.get("/ranking")
-async def get_ranking(request: Request):
-    # Restituisce il template HTML (ranking.html) con la variabile "request"
+
+
+# Ranking
+@app.get("/ranking", response_class=HTMLResponse)
+async def get_ranking(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("ranking.html", {"request": request})
-@app.get("/judge_multi")
-async def get_judge_multi(request: Request):
+
+
+# Judge multi UI
+@app.get("/judge_multi", response_class=HTMLResponse)
+async def get_judge_multi(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("judge_multi.html", {"request": request})
-@app.get("/player_multi")
-async def get_player_multi(request: Request):
-    return templates.TemplateResponse("player_multi.html", {"request": request})    
+
+
+# Player multi UI
+@app.get("/player_multi", response_class=HTMLResponse)
+async def get_player_multi(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse("player_multi.html", {"request": request})

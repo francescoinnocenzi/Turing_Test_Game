@@ -1,6 +1,15 @@
 import re
 
 def clean_text(text: str) -> str:
+    """
+    Pulisce il testo rimuovendo emoji e simboli di markdown.
+
+    Args
+        text (str): Il testo da pulire.
+    
+    Returns
+        str: Il testo pulito.
+    """
     # 1. Rimuovi emoji
     emoji_pattern = re.compile("[" 
         u"\U0001F600-\U0001F64F"  # emoticon

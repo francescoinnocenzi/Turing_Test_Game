@@ -1,7 +1,14 @@
 from pydantic import BaseModel
 
-# 🔹 1. Definisci SessionData
 class SessionData(BaseModel):
+    """
+    Dati relativi alla sessione utente.
+
+    Attributes
+        user_id (int): ID dell'utente loggato.
+        session_id (int | None): ID della sessione attiva.
+        room_name (str | None): Nome della stanza associata alla sessione.
+    """
     user_id: int # id user_logato
     session_id: int | None = None
     room_name: str | None = None
