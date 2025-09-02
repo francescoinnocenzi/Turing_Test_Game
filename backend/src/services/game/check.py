@@ -94,10 +94,10 @@ async def check_and_finalize_game(session_id: int, room_name: str, question_coun
             judgment_result = await get_llm_judgment(session_id)
 
             #Aggiusto punteggi
-            if judgment_result.human_result == "HUMAN ha PERSO":
+            if judgment_result.judge_result == "GIUDICE ha VINTO":
                 print(f"GIUDICE LLM ha indovinato con user {state.user_id}")
                 handle_scores(user_id= state.user_id, session_id=session_id, mode="single",role=role, win=True) 
-            elif judgment_result.human_result == "HUMAN ha VINTO":
+            elif judgment_result.judge_result == "GIUDICE ha PERSO":
                 print(f"GIUDICE LLM ha sbagliato con user {state.user_id}")
                 handle_scores(user_id= state.user_id, session_id=session_id, mode="single",role=role, win=False)
             else:
@@ -106,8 +106,8 @@ async def check_and_finalize_game(session_id: int, room_name: str, question_coun
             print(f"GIUDIZIO {judgment_result}")
             
             # Invia il giudizio a tutti i client
-            await manager.send_judgment_to_all(judgment_result.human_result, room_name)
-            print(f"Giudizio inviato: {judgment_result.human_result}")
+            await manager.send_judgment_to_all(judgment_result.judge_result, room_name)
+            print(f"Giudizio inviato: {judgment_result.judge_result}")
         
         if (mode == "single" or mode == "multi") and role == "JUDGE":
             await manager.send_message_to_all("Scegli chi è UMANO", "time_to_judge", room_name)

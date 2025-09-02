@@ -77,8 +77,8 @@ async def handle_question(room_name: str, websocket, role: str, message: Dict[st
     """
     text = message.get("text")
 
-    print(f"Domanda dal giudice: {text}")
-    
+    print(f"Messaggio arrivato da {role}: {text}")
+
     # Salva domanda
     q_req = QuestionRequest(
         text=text,

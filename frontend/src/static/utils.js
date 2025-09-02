@@ -65,7 +65,7 @@ export function showResultModal(result, mode, page) {
                 }
                 </div>
                 
-                <a href="/singleplayer" class="close-button"">
+                <a href="/index" class="close-button"">
                     🏠 Torna al Menu
                 </a>
                 <button id="play-again" class="close-button"">

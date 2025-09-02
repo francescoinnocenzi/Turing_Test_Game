@@ -38,7 +38,7 @@ class LLMJudgmentResponse(BaseModel):
 
     Attributes
         judgment (str): Giudizio prodotto dal modello LLM.
-        human_result (str): Valutazione o risultato relativo al giocatore umano.
+        judge_result (str): Valutazione o risultato relativo al giudice.
     """
     judgment: str
-    human_result: str
+    judge_result: str

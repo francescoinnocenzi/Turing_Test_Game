@@ -62,12 +62,19 @@ function setupWebSocket(selectedRoom) {
                 }, 2000);
             } else if (msg.type === "final_judgment") {
                 console.log("Giudizio finale ricevuto:", msg.judgment);
-            
-                const patterns = ["HUMAN ha VINTO", "HUMAN ha PERSO"];
-                const humanResult = patterns.find(p => msg.judgment.includes(p));
+        
+                let playerResult = null;
 
-                if (humanResult) {
-                    showResultModal(humanResult, 'single', 'player');
+                if (msg.judgment.includes("GIUDICE ha VINTO")) {
+                    playerResult = "PLAYER ha PERSO";
+                } else if (msg.judgment.includes("GIUDICE ha PERSO")) {
+                    playerResult = "PLAYER ha VINTO";
+                }
+                
+                console.log(playerResult);
+
+                if (playerResult) {
+                    showResultModal(playerResult, 'single', 'player');
                 }
                         
             } else {

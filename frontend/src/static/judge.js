@@ -213,6 +213,7 @@ function submitJudgment() {
 }
 
 window.submitJudgment = submitJudgment;
+window.sendQuestion = sendQuestion;
 
 
 // NUOVA FUNZIONE: Chiudi modale

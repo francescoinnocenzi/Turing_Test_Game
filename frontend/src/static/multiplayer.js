@@ -52,6 +52,7 @@ async function loadRooms() {
     }
 }
 
+
 async function joinRoom(roomName) {
     try {
         const response = await fetch(`http://localhost:8003/join/session/${roomName}`, {
@@ -76,3 +77,4 @@ async function joinRoom(roomName) {
 window.createJudgeSession = createJudgeSession;
 window.openModal = openModal;
 window.closeModal = closeModal;
+window.loadRooms = loadRooms;

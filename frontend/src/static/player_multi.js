@@ -1,4 +1,4 @@
-import { getRoomNameFromUrl } from "./utils.js";
+import { getRoomNameFromUrl, showResultModal } from "./utils.js";
 
 let ws = null;
 let clientId = Math.floor(Math.random()*100000);
@@ -46,13 +46,18 @@ ws.onmessage = (event) => {
 
     // Gioco terminato
     else if(data.type === "final_judgment"){
-        console.log("Giudizio finale ricevuto:", msg.judgment);
-                
-        const patterns = ["HUMAN ha VINTO", "HUMAN ha PERSO"];
-        const humanResult = patterns.find(p => msg.judgment.includes(p));
+        console.log("Giudizio finale ricevuto:", data.judgment);
 
-        if (humanResult) {
-            showResultModal(humanResult, 'multi', 'player_multi');
+        let playerResult = null;
+
+        if (data.judgment.includes("GIUDICE ha VINTO")) {
+            playerResult = "PLAYER ha PERSO";
+        } else if (data.judgment.includes("GIUDICE ha PERSO")) {
+            playerResult = "PLAYER ha VINTO";
+        }
+
+        if (playerResult) {
+            showResultModal(playerResult, 'multi', 'player_multi');
         }
     }
 };

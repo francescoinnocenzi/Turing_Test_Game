@@ -132,7 +132,7 @@ async def get_llm_judgment(session_id: int) -> Union["LLMJudgmentResponse", dict
             # human_responses=len(human_responses),
             # bot_responses=len(bot_responses),
             # correct_guess="GIUDICE ha VINTO" if correct_answer else "GIUDICE ha PERSO",
-            human_result="HUMAN ha VINTO" if not correct_answer else "HUMAN ha PERSO"
+            judge_result="GIUDICE ha PERSO" if not correct_answer else "GIUDICE ha VINTO"
         )
         
     except Exception as e:

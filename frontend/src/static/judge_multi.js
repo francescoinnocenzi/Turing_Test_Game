@@ -26,19 +26,20 @@ if (roomName) {
         const button = document.querySelector(".send-button");
 
         console.log("📩 Messaggio ricevuto:", data);
+        console.log("Ricevuto messaggio:", data.type);
 
         if (data.type === "player_answer") {
             pendingAnswers.push(data);
         } else if (data.type === "time_to_judge") {
             document.getElementById("judgmentContainer").innerHTML = `
-        <div class="judgment-form">
-          <h3>⚖️ Chi pensi sia UMANO?</h3>
-          <div class="judgment-options">
-            <label><input type="radio" name="chosen_player" value="A"><span>Player A</span></label>
-            <label><input type="radio" name="chosen_player" value="B"><span>Player B</span></label>
-          </div>
-          <button class="confirm-button" onclick="submitJudgment()">Conferma scelta</button>
-        </div>`;
+            <div class="judgment-form">
+            <h3>⚖️ Chi pensi sia UMANO?</h3>
+            <div class="judgment-options">
+                <label><input type="radio" name="chosen_player" value="A"><span>Player A</span></label>
+                <label><input type="radio" name="chosen_player" value="B"><span>Player B</span></label>
+            </div>
+            <button class="confirm-button" onclick="submitJudgment()">Conferma scelta</button>
+            </div>`;
         } else if (data.type === "all_answered") {
             console.log("✅ Tutti i player hanno risposto!");
 
@@ -146,6 +147,8 @@ function submitJudgment() {
 }
 
 window.submitJudgment = submitJudgment;
+window.sendQuestion = sendQuestion;
+
 
 // ✅ NUOVA FUNZIONE: Chiudi modale
 function closeResultModal() {
