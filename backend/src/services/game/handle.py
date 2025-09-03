@@ -129,7 +129,7 @@ async def handle_question(room_name: str, websocket, role: str, message: Dict[st
         await manager.send_answer_to_judge(bot2_resp, room_name, "HUMAN") #metto 1 perche risponde al posto di HUMAN
         print(f" BOT-Retrieval answer sent: {bot2_resp}")  # <-- log
 
-    await check_all_answered(saved_q.id, room_name, session_id=session_id, role="JUDGE", mode=mode)
+    await check_all_answered(saved_q.id, room_name, session_id=session_id, role=role, mode=mode)
 
 #Gestione della risposta inviata singleplayer
 async def handle_answer(room_name: str, websocket: ConnectionManager, role: str, message: Dict[str, Any], mode: str, session_id: int, user_id: int) -> None:

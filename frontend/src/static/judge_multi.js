@@ -31,6 +31,10 @@ if (roomName) {
         if (data.type === "player_answer") {
             pendingAnswers.push(data);
         } else if (data.type === "time_to_judge") {
+            input.disabled = true;
+            button.disabled = true;
+            input.placeholder = "Partita giunta al termine...";
+
             document.getElementById("judgmentContainer").innerHTML = `
             <div class="judgment-form">
             <h3>⚖️ Chi pensi sia UMANO?</h3>
@@ -85,6 +89,21 @@ if (roomName) {
             if (judgeResult) {
                 showResultModal(judgeResult, 'multi', 'judge_multi');
             }
+        } else if (data.type === "players_update") {
+            const playersCount = document.getElementById("players-count");
+
+            console.log("Player update", data);
+            if(data.players === 0) {
+                input.disabled = true;
+                button.disabled = true;
+            } else if(data.players === 1) {
+                input.disabled = false;
+                button.disabled = false;
+            }
+
+            playersCount.textContent = `${data.players}/1`;
+
+            console.log("Players:", data.players, "Input abilitato:", !input.disabled);
         }
     };
 }

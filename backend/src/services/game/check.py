@@ -36,7 +36,6 @@ async def check_all_answered(question_id: int, room_name: str, session_id: int, 
         question_count = cursor.fetchone()[0]
 
         MAX_QUESTIONS = 1  # Configurabile
-        await check_and_finalize_game(session_id, room_name, question_count, MAX_QUESTIONS, role, mode)
 
         # Conta risposte per la domanda corrente
         cursor.execute("""
@@ -59,6 +58,9 @@ async def check_all_answered(question_id: int, room_name: str, session_id: int, 
 
             if role == "HUMAN" and mode == "single" and question_count < MAX_QUESTIONS:
                 await auto_generate_next_question(room_name, session_id)
+            
+            if question_count >= MAX_QUESTIONS:
+                await check_and_finalize_game(session_id, room_name, question_count, MAX_QUESTIONS, role, mode)
 
         cursor.close()
         conn.close()
@@ -87,27 +89,26 @@ async def check_and_finalize_game(session_id: int, room_name: str, question_coun
         HTTPException: Se i risultati del giudizio LLM non sono validi.
         Exception: Propaga altri errori generici durante l'invio dei messaggi.
     """
-    if question_count >= max_questions:
 
-        if mode == "single" and role == "HUMAN":
-            # Fine partita - esegui giudizio
-            judgment_result = await get_llm_judgment(session_id)
+    if mode == "single" and role == "HUMAN":
+        # Fine partita - esegui giudizio
+        judgment_result = await get_llm_judgment(session_id)
 
-            #Aggiusto punteggi
-            if judgment_result.judge_result == "GIUDICE ha VINTO":
-                print(f"GIUDICE LLM ha indovinato con user {state.user_id}")
-                handle_scores(user_id= state.user_id, session_id=session_id, mode="single",role=role, win=True) 
-            elif judgment_result.judge_result == "GIUDICE ha PERSO":
-                print(f"GIUDICE LLM ha sbagliato con user {state.user_id}")
-                handle_scores(user_id= state.user_id, session_id=session_id, mode="single",role=role, win=False)
-            else:
-                raise HTTPException(status_code=500, detail="Errore nei punteggi del giudizio LLM")
-            # Invia risultato finale
-            print(f"GIUDIZIO {judgment_result}")
-            
-            # Invia il giudizio a tutti i client
-            await manager.send_judgment_to_all(judgment_result.judge_result, room_name)
-            print(f"Giudizio inviato: {judgment_result.judge_result}")
+        #Aggiusto punteggi
+        if judgment_result.judge_result == "GIUDICE ha VINTO":
+            print(f"GIUDICE LLM ha indovinato con user {state.user_id}")
+            handle_scores(user_id= state.user_id, session_id=session_id, mode="single",role=role, win=True) 
+        elif judgment_result.judge_result == "GIUDICE ha PERSO":
+            print(f"GIUDICE LLM ha sbagliato con user {state.user_id}")
+            handle_scores(user_id= state.user_id, session_id=session_id, mode="single",role=role, win=False)
+        else:
+            raise HTTPException(status_code=500, detail="Errore nei punteggi del giudizio LLM")
+        # Invia risultato finale
+        print(f"GIUDIZIO {judgment_result}")
         
-        if (mode == "single" or mode == "multi") and role == "JUDGE":
-            await manager.send_message_to_all("Scegli chi è UMANO", "time_to_judge", room_name)
+        # Invia il giudizio a tutti i client
+        await manager.send_judgment_to_all(judgment_result.judge_result, room_name)
+        print(f"Giudizio inviato: {judgment_result.judge_result}")
+    
+    if (mode == "single" or mode == "multi"):
+        await manager.send_message_to_all("Scegli chi è UMANO", "time_to_judge", room_name)

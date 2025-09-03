@@ -5,48 +5,61 @@
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>Accedi</title>
         <style>
-            :root {
-                --grad-a: #ff6b6b;
-                --grad-b: #ee5a24;
-                --txt: #333;
-                --muted: #6c757d;
-                --card: #fff;
-                --bd: #eee;
-                --ok: #28a745;
-                --err: #dc3545;
-            }
-            * {
-                box-sizing: border-box;
-            }
             body {
-                font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(
-                    135deg,
-                    var(--grad-a) 0%,
-                    var(--grad-b) 100%
-                );
+                font-family: 'Share Tech Mono', monospace;
+                background: linear-gradient(135deg, #0f0f23 0%, #16213e 25%, #1a1a2e 50%, #0f0f23 100%);
+                color: #e0e0e0;
                 min-height: 100vh;
-                margin: 0;
-                display: grid;
-                place-items: center;
-                padding: 1.2rem;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 1rem;
+
+            }
+
+                body::before {
+                content: '';
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-image: 
+                    linear-gradient(rgba(0, 255, 255, 0.05) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(0, 255, 255, 0.05) 1px, transparent 1px);
+                background-size: 50px 50px;
+                pointer-events: none;
+                z-index: -1;
+            }
+
+            .title {
+                font-size: 3rem;
+                font-weight: 900;
+                margin-bottom: 0.5rem;
+                text-shadow: 0 0 10px #00ffffc1;
+                font-family: 'Orbitron', monospace;
+                letter-spacing: 0px;
+                color: #00ffff;
+                text-align: center;
             }
             .card {
+                background: rgba(0, 255, 255, 0.05);
+                border: 1px solid rgba(0, 255, 255, 0.3);
+                padding: 2rem !important;
                 width: 100%;
                 max-width: 420px;
-                background: var(--card);
                 border-radius: 20px;
-                padding: 2rem;
-                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
                 animation: rise 0.5s ease;
+                backdrop-filter: blur(5px);
             }
+
             h1 {
                 margin: 0 0 0.25rem;
                 text-align: center;
                 color: var(--txt);
             }
             .subtitle {
-                color: var(--muted);
+                color: rgb(255, 255, 255);
                 text-align: center;
                 margin-bottom: 1.5rem;
                 font-size: 0.95rem;
@@ -59,20 +72,27 @@
             }
             label {
                 font-weight: 600;
-                color: #444;
+                color: #00ffee;
                 font-size: 0.95rem;
             }
             input {
-                padding: 0.9rem 1rem;
-                border-radius: 14px;
-                border: 2px solid var(--bd);
+                padding: 1rem;
+                border-radius: 25px;
                 font-size: 1rem;
+                transition: all 0.3s ease;
+                color: #333;
                 outline: none;
-                transition: 0.2s;
+                border: 1px solid rgba(0, 255, 255, 0.3);
+                background: rgba(0, 255, 255, 0.05);
+                border-radius: 8px;
+                font-family: 'Share Tech Mono', monospace;
+                transition: all 0.2s;
+                color: #e0e0e0;
             }
             input:focus {
-                border-color: var(--grad-a);
-                box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.18);
+                outline: none;
+                border-color: #00ffff;
+                background: rgba(0, 255, 255, 0.08);
             }
             .btn {
                 width: 100%;
@@ -82,12 +102,8 @@
                 border-radius: 18px;
                 font-weight: 700;
                 letter-spacing: 0.2px;
-                background: linear-gradient(
-                    135deg,
-                    var(--grad-a),
-                    var(--grad-b)
-                );
-                color: white;
+                background:#00ffff;
+                color: black;
                 box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
                 transition: transform 0.1s ease;
             }
@@ -101,7 +117,8 @@
                 color: var(--muted);
             }
             .links a {
-                color: var(--grad-b);
+                color: #00ffff;
+                text-shadow: 0 0 10px #00ffffc1;
                 text-decoration: none;
                 font-weight: 700;
             }
@@ -141,7 +158,7 @@
     </head>
     <body>
         <main class="card">
-            <h1>🔐 Accedi</h1>
+            <h1 class="title">🔐 Accedi</h1>
             <p class="subtitle">
                 Usa <strong>username</strong> <em>oppure</em>
                 <strong>email</strong> + password.

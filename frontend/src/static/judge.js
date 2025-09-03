@@ -39,9 +39,9 @@ function setupWebSocket(roomName) {
                 pendingAnswers.push(data); // salva in memoria le risposte
                 console.log('pending: ' + pendingAnswers);
             } else if(data.type == "time_to_judge"){
-                input.disabled = false;
-                input.placeholder = "✍️ Scrivi una domanda...";
-                button.disabled = false;
+                input.disabled = true;
+                input.placeholder = "Partita giunta al termine...";
+                button.disabled = true;
 
                 const container = document.getElementById("judgmentContainer");
                 

@@ -47,6 +47,8 @@ class ConnectionManager:
             print(f"ASSIGNED ROLE: Client {client_id} → {role}")
         
         print(f"ROOMS STATE: {[(r, list(clients.keys())) for r, clients in self.rooms.items()]}")
+        await self.notify_players_update(room_name)
+
 
     def disconnect(self, room_name: str, client_id: int):
         """
@@ -68,6 +70,33 @@ class ConnectionManager:
                 self.rooms.pop(room_name)
         
         print(f"DISCONNECT - Client {client_id} disconnected from {room_name}")
+    
+    async def notify_players_update(self, room_name: str):
+        """
+        Conta i giocatori (HUMAN) e notifica il giudice del numero aggiornato,
+        includendo anche se il giudice è connesso.
+        """
+        room = self.rooms.get(room_name, {})
+
+        players = sum(1 for c in room.values() if c["role"] == "HUMAN")
+        judge_connected = any(c["role"] == "JUDGE" for c in room.values())
+
+        message = {
+            "type": "players_update", 
+            "players": players,
+            "judge": 1 if judge_connected else 0
+        }
+
+        print(f"Notifico il giudice: {message}")
+
+        # invio l'aggiornamento a tutti (non solo al judge, così anche i player possono vedere lo stato)
+        for client_id, client_data in room.items():
+            try:
+                await client_data["ws"].send_text(json.dumps(message))
+                print(f"  → Players update sent to client {client_id}")
+            except Exception as e:
+                print(f"Error sending players update to client {client_id}: {e}")
+
 
         
     async def broadcast(self, message: str, room_name: str):

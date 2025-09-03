@@ -4,18 +4,49 @@
   <title>Multiplayer - JUDGE</title>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            font-family: 'Share Tech Mono', monospace;
+            background: linear-gradient(135deg, #0f0f23 0%, #16213e 25%, #1a1a2e 50%, #0f0f23 100%);
+            color: #e0e0e0;
             min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             padding: 1rem;
+
         }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .mode-badge{
+            text-shadow: 0 0 10px #00ffffc1;
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 3rem;
+            font-weight: 700;
+            color: #00ffff;
+            font-family: 'Share Tech Mono', monospace;
+        }
+
         .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 20px;
+            width: 80%;
+            background: rgba(0, 255, 255, 0.03);
+            backdrop-filter: blur(5px);
+            border-radius: 12px;
             padding: 2rem;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            border: 1px solid rgba(0, 255, 255, 0.2);
         }
         h1 {
             text-align: center;
@@ -24,10 +55,14 @@
             margin-bottom: 1rem;
         }
         .status-info {
-            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
-            color: white;
+            background: rgba(0, 255, 255, 0.1);
             padding: 1rem;
-            border-radius: 15px;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            font-weight: 500;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            color: white;
+            font-family: 'Share Tech Mono', monospace;
             text-align: center;
             margin-bottom: 1.5rem;
             font-weight: bold;
@@ -41,19 +76,24 @@
             flex: 1;
             padding: 1rem;
             border-radius: 25px;
-            border: 2px solid #eee;
             font-size: 1rem;
             transition: all 0.3s ease;
-            background-color: #fff;
             color: #333;
             outline: none;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            background: rgba(0, 255, 255, 0.05);
+            border-radius: 8px;
+            font-family: 'Share Tech Mono', monospace;
+            transition: all 0.2s;
+            color: #e0e0e0;
         }
-        /* Stato ABILITATO (focus) */
+
         .question-form input:focus {
-            border-color: #ff6b6b;
-            box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.2);
-            background-color: #fff;
+            outline: none;
+            border-color: #00ffff;
+            background: rgba(0, 255, 255, 0.08);
         }
+
         /* Stato DISABILITATO */
         .question-form input:disabled {
             background-color: #f8f9fa;
@@ -68,8 +108,8 @@
             opacity: 1;
         }
         .send-button {
-            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
-            color: white;
+            background: #00ffff;
+            color: black;
             border: none;
             padding: 1rem 2rem;
             border-radius: 25px;
@@ -101,7 +141,7 @@
         }
         .chat-box {
             flex: 1;
-            border: 2px solid #eee;
+            border: 1px solid rgba(0, 255, 255, 0.2);
             border-radius: 15px;
             padding: 1rem;
             max-height: 400px;
@@ -116,7 +156,7 @@
             padding: 0;
         }
         li {
-            background: #f8f9fa;
+            background: #8a8a8a1c;
             margin-bottom: 0.8rem;
             padding: 0.8rem;
             border-radius: 10px;
@@ -156,9 +196,9 @@
             margin-top: 2rem;
             margin-bottom: 2rem;
             padding: 1.5rem;
-            border: 2px solid #eee;
             border-radius: 20px;
-            background: linear-gradient(135deg, #fff, #fdf2f2);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            background: rgba(0, 255, 255, 0.1);
             box-shadow: 0 10px 20px rgba(0,0,0,0.05);
             text-align: center;
             animation: fadeIn 0.6s ease;
@@ -175,7 +215,7 @@
         .judgment-form h3 {
             font-size: 1.3rem;
             margin-bottom: 1rem;
-            color: #333;
+            color: #ffffff;
         }
 
         .judgment-form label {
@@ -193,26 +233,27 @@
         /* Radio */
         .judgment-form input[type="radio"] {
             margin-right: 0.5rem;
-            accent-color: #ff6b6b;
+            accent-color: #36ffdd;
+;
         }
 
         /* Hover */
         .judgment-form label:hover {
-            background: rgba(255, 107, 107, 0.08);
+            background: rgba(107, 255, 245, 0.08);
             transform: scale(1.02);
         }
 
         /* Opzione selezionata */
         .judgment-form input[type="radio"]:checked + span {
             font-weight: bold;
-            color: #ee5a24;
+            color: #36ffdd;
         }
 
         /* Bottone di conferma */
         .confirm-button {
             margin-top: 1rem;
-            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
-            color: white;
+            background: #00ffff;
+            color: black;
             border: none;
             padding: 0.8rem 1.8rem;
             border-radius: 25px;
@@ -333,10 +374,10 @@
 <body>
 
 <div class="container" id="mainContainer">
-  <h1>🎮 JUDGE</h1>
+  <div class="mode-badge">JUDGE</div>
 
   <div class="status-info" id="statusInfo">
-    🏠 Room: <span id="room-id">
+    🏠 Room: <span id="room-id"></span> | 👤 Player: <span id="players-count">0/1</span>
   </div>
 
   <div class="question-form">

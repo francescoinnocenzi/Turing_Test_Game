@@ -83,4 +83,6 @@ async def ws_entrypoint(websocket: WebSocket, room_name: str, client_id: str, co
     except WebSocketDisconnect:
         manager.disconnect(room_name, client_id)
         await manager.broadcast(f"Client #{client_id} left {room_name}", room_name)
+        await manager.notify_players_update(room_name)
+
 

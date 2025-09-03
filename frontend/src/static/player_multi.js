@@ -59,6 +59,15 @@ ws.onmessage = (event) => {
         if (playerResult) {
             showResultModal(playerResult, 'multi', 'player_multi');
         }
+    }else if(data.type === "players_update"){
+        const judgeCount = document.getElementById("judge-count");
+        judgeCount.textContent = `${data.judge}/1`;
+
+        if(data.judge === 0) {
+            disableForm();
+        } else if(data.judge === 1) {
+            enableForm();
+        }
     }
 };
 

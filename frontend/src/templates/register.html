@@ -5,82 +5,107 @@
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>Registrati</title>
         <style>
-            :root {
-                --grad-a: #ff6b6b;
-                --grad-b: #ee5a24;
-                --txt: #333;
-                --muted: #6c757d;
-                --card: #fff;
-                --bd: #eee;
-            }
-            * {
-                box-sizing: border-box;
-            }
             body {
-                font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(
-                    135deg,
-                    var(--grad-a) 0%,
-                    var(--grad-b) 100%
-                );
+                font-family: 'Share Tech Mono', monospace;
+                background: linear-gradient(135deg, #0f0f23 0%, #16213e 25%, #1a1a2e 50%, #0f0f23 100%);
+                color: #e0e0e0;
                 min-height: 100vh;
-                margin: 0;
-                display: grid;
-                place-items: center;
-                padding: 1.2rem;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 1rem;
+
             }
+
+                body::before {
+                content: '';
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-image: 
+                    linear-gradient(rgba(0, 255, 255, 0.05) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(0, 255, 255, 0.05) 1px, transparent 1px);
+                background-size: 50px 50px;
+                pointer-events: none;
+                z-index: -1;
+            }
+
             .card {
                 width: 100%;
                 max-width: 520px;
-                background: var(--card);
-                border-radius: 20px;
+                background: rgba(0, 255, 255, 0.03);
+                backdrop-filter: blur(5px);
+                border-radius: 12px;
                 padding: 2rem;
-                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+                border: 1px solid rgba(0, 255, 255, 0.2);
                 animation: rise 0.5s ease;
             }
+
             h1 {
-                margin: 0 0 0.25rem;
+                font-size: 2.5rem;
+                font-weight: 900;
+                margin: 0 0 0.5rem;
+                text-shadow: 0 0 10px #00ffffc1;
+                font-family: 'Orbitron', monospace;
+                color: #00ffff;
                 text-align: center;
-                color: var(--txt);
             }
+
             .subtitle {
-                color: var(--muted);
+                color: rgba(224, 224, 224, 0.7);
                 text-align: center;
                 margin-bottom: 1.5rem;
                 font-size: 0.95rem;
             }
+
             .grid {
                 display: grid;
                 gap: 1rem;
             }
+
             @media (min-width: 640px) {
                 .grid.two {
                     grid-template-columns: 1fr 1fr;
                 }
             }
+
             .field {
                 display: flex;
                 flex-direction: column;
                 gap: 0.4rem;
             }
+
             label {
                 font-weight: 600;
-                color: #444;
+                color: #e0e0e0;
                 font-size: 0.95rem;
             }
+
             input {
                 padding: 0.9rem 1rem;
-                border-radius: 14px;
-                border: 2px solid var(--bd);
+                border-radius: 8px;
+                border: 1px solid rgba(0, 255, 255, 0.3);
+                background: rgba(0, 0, 0, 0.3);
+                color: #e0e0e0;
                 font-size: 1rem;
                 outline: none;
-                transition: 0.2s;
+                transition: all 0.3s ease;
             }
+
             input:focus {
-                border-color: var(--grad-a);
-                box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.18);
+                border-color: #00ffff;
+                box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+                background: rgba(0, 0, 0, 0.5);
             }
+
+            input::placeholder {
+                color: rgba(224, 224, 224, 0.4);
+            }
+
             .btn {
+                margin-top: 2rem;
                 width: 100%;
                 padding: 0.95rem 1rem;
                 border: none;
@@ -88,52 +113,65 @@
                 border-radius: 18px;
                 font-weight: 700;
                 letter-spacing: 0.2px;
-                background: linear-gradient(
-                    135deg,
-                    var(--grad-a),
-                    var(--grad-b)
-                );
-                color: white;
+                background:#00ffff;
+                color: black;
                 box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
                 transition: transform 0.1s ease;
-                margin-top: 0.5rem;
             }
+
+            .btn:hover {
+                box-shadow: 0 6px 20px rgba(0, 255, 255, 0.4);
+                transform: translateY(-2px);
+            }
+
             .btn:active {
-                transform: translateY(1px);
+                transform: translateY(0);
             }
+
             .links {
                 margin-top: 1rem;
                 text-align: center;
                 font-size: 0.95rem;
-                color: var(--muted);
+                color: rgba(224, 224, 224, 0.7);
             }
+
             .links a {
-                color: var(--grad-b);
+                color: #00ffff;
                 text-decoration: none;
                 font-weight: 700;
+                transition: color 0.3s ease;
             }
+
+            .links a:hover {
+                color: #66ffff;
+            }
+
             .msg {
                 margin: 0.75rem 0;
                 padding: 0.8rem 1rem;
-                border-radius: 12px;
+                border-radius: 8px;
                 font-size: 0.95rem;
                 display: none;
             }
+
             .msg.ok {
-                background: #e9f8ee;
-                color: #155724;
-                border: 1px solid #c7eed8;
+                background: rgba(0, 255, 0, 0.1);
+                color: #00ff00;
+                border: 1px solid rgba(0, 255, 0, 0.3);
             }
+
             .msg.err {
-                background: #ffecec;
-                color: #7b1c1c;
-                border: 1px solid #ffc9c9;
+                background: rgba(255, 0, 0, 0.1);
+                color: #ff6b6b;
+                border: 1px solid rgba(255, 0, 0, 0.3);
             }
+
             .hint {
                 font-size: 0.85rem;
-                color: #999;
+                color: rgba(224, 224, 224, 0.5);
                 margin-top: 0.25rem;
             }
+
             @keyframes rise {
                 from {
                     opacity: 0;
