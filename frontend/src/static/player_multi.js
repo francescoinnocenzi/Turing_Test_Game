@@ -65,8 +65,6 @@ ws.onmessage = (event) => {
 
         if(data.judge === 0) {
             disableForm();
-        } else if(data.judge === 1) {
-            enableForm();
         }
     }
 };

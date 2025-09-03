@@ -39,6 +39,10 @@
             pointer-events: none;
             z-index: -1;
         }
+
+        a{
+            text-decoration: none;
+        }
         
         .container {
             width: 80%;
@@ -214,8 +218,8 @@
 
     <div class="answer-form">
         <form id="messageForm" onsubmit="return false;">
-            <input type="text" id="messageText" disabled="true" autocomplete="off" placeholder="⏳ Attendi la domanda del giudice..." />
-            <button type="submit" disabled="true" class="send-button">📤 Invia</button>
+            <input type="text" id="messageText" disabled autocomplete="off" placeholder="⏳ Attendi la domanda del giudice..." />
+            <button type="submit" disabled  class="send-button">📤 Invia</button>
         </form>
     </div>
 </div>

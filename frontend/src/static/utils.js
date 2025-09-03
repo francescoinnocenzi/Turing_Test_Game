@@ -68,16 +68,19 @@ export function showResultModal(result, mode, page) {
                 <a href="/index" class="close-button"">
                     🏠 Torna al Menu
                 </a>
-                <button id="play-again" class="close-button"">
+                ${page !== "player_multi" ? `<button id="play-again" class="close-button"">
                     🎮 Gioca ancora
-                </button> 
+                </button>` : ''}
             </div>
         `;
 
     // Aggiungi al body
     document.body.appendChild(modalOverlay);
 
-    createSession(document.getElementById("play-again"), mode, page);
+    // Solo se non è player_multi, aggiungi l'event listener per "Gioca ancora"
+    if (page !== "player_multi") {
+        createSession(document.getElementById("play-again"), mode, page);
+    }
 
     // Salva riferimento per poterla chiudere
     window.currentModal = modalOverlay;
