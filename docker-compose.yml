@@ -4,12 +4,11 @@ services:
         ports:
             - "11434:11434"
         volumes:
-            - ollama_models:/root/.ollama
-            - ./models:/models
+            - ./ollama_data:/root/.ollama   # dati Ollama dentro la cartella progetto
+
     mariadb:
         image: mariadb:11.7.2-ubi9
         container_name: mariadb-turing
-        restart: always
         environment:
             MYSQL_ROOT_PASSWORD: password
             MYSQL_DATABASE: turing_game
@@ -18,13 +17,8 @@ services:
         ports:
             - "3307:3306"
         volumes:
-            - mariadb_data:/var/lib/mysql
+            - ./mariadb_data:/var/lib/mysql   # dati MariaDB dentro la cartella progetto
             - ./mariadb_init/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-        # healthcheck:
-        #   test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ppassword"]
-        #   interval: 10s
-        #   timeout: 5s
-        #   retries: 5
 
     backend:
         build:
@@ -33,12 +27,10 @@ services:
         ports:
             - "8003:8003"
         environment:
-            - PYTHONUNBUFFERED=1  # altrimenti le print in websocoket.py e backned.py non vengono mostrate nel terminale
+            - PYTHONUNBUFFERED=1  # altrimenti le print in websocket.py e backend.py non vengono mostrate nel terminale
         depends_on:
             - mariadb
             - ollama
-
-            # condition: service_healthy
 
     frontend:
         build:
@@ -48,11 +40,4 @@ services:
             - "8001:8001"
         depends_on:
             - backend
-            # condition: service_started
-    
-# Monta il volume Docker esistente chiamato ollama dentro il container nel percorso /root/.ollama (come specificato sopra nei volumes del servizio)
-volumes:
-    ollama_models:
-        external: true
-        name: ollama 
-    mariadb_data:
+

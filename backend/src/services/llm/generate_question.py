@@ -54,7 +54,6 @@ def create_question_llm() -> dict[str, str]:
             "Naturale e colloquiale, stile chat. "
             "Solo la domanda, niente emoji. "
             "Evita riferimenti a personaggi famosi, politica o attualità. "
-            "Tema: {theme}. "
             "Non ripetere domande già fatte."
         )
     }
@@ -132,9 +131,8 @@ async def auto_generate_next_question(room_name: str, session_id: int):
             )
             saved_question = create_question(question_request)
                         
-            # Invia la domanda ai player
+            # Invia la domanda ai player con relativo id della domanda a cui rispondere
             await manager.send_question_to_players(next_question, room_name, saved_question.id)
-
             
             print(f"Domanda salvata con ID: {saved_question.id}")
             

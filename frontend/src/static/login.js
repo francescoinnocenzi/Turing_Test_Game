@@ -29,7 +29,6 @@ form.addEventListener("submit", async (e) => {
         msg.textContent = "Accesso riuscito! 🎉";
         msg.style.display = "block";
 
-        // TODO: redirect dove vuoi (dashboard/home)
         setTimeout(() => {
             window.location.href = "/index";
         }, 800);

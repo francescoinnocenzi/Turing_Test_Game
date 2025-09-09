@@ -67,7 +67,9 @@ def ask_with_memory(request: RequestAPI) -> ResponseAPI:
     messages: list = [system_prompt] + state.chat_history  # prepend il system
 
     payload = {
-        "model": "gemma2:2b-instruct-q2_K", #Versione ottimizzata di gemma2:2b-instruct-q2_K
+        #gemma2:2b-instruct-q2_K
+        #gemma3:4b
+        "model": "gemma2:2b-instruct-q2_K", #Versione ottimizzata di gemma3:4b
         "messages": messages,
         "stream": False
     }
@@ -112,11 +114,12 @@ async def trova_simile(request: QuestionRequest) -> SimilarityResponse:
     model = get_model()  # modello caricato solo alla prima chiamata
     conn = create_db_connection()
     cursor = conn.cursor()
+
     input_frase = request.text
     soglia_similarità = 0.8
 
     try:
-        # Prendo solo domande di altre sessioni
+        # Prendo solo domande di sessioni precedenti
         cursor.execute("""
             SELECT id, text, embedding
             FROM questions
@@ -124,7 +127,9 @@ async def trova_simile(request: QuestionRequest) -> SimilarityResponse:
         """, (request.session_id,))
         frasi_trovate = cursor.fetchall()  # [(id, text, embedding_json), ...]
 
+        # Se non ha trovato domande di sessioni precedenti nel db
         if not frasi_trovate:
+            # La risposta viene generata dal modello LLM
             risposta_nuova = await get_llm_response(input_frase)
             response = SimilarityResponse(
                 frase_input=input_frase,
@@ -144,23 +149,23 @@ async def trova_simile(request: QuestionRequest) -> SimilarityResponse:
         for row in frasi_trovate:
             ids.append(row[0])
             testi.append(row[1])
-            embeddings_db.append(torch.tensor(json.loads(row[2])))
+            embeddings_db.append(torch.tensor(json.loads(row[2]))) # deserializzo da JSON in tensore che utilizza pytorch
 
-        embeddings_db = torch.stack(embeddings_db)
+        embeddings_db = torch.stack(embeddings_db) 
 
-        # Embedding input
+        # Embedding input in ingresso
         embedding_input = model.encode(input_frase, convert_to_tensor=True)
 
-        # Calcolo similarità coseno
+        # Calcolo similarità coseno tra embedding_input e embeddings_db
         cosine_scores = util.cos_sim(embedding_input, embeddings_db)
 
-        # Trovo frase più simile
-        best_idx = cosine_scores.argmax().item()
-        best_score = cosine_scores[0][best_idx].item()
-        best_sentence = testi[best_idx]
-        best_id = ids[best_idx]
+        # Trovo domanda più simile
+        best_idx = cosine_scores.argmax().item() # Indice del valore massimo
+        best_score = cosine_scores[0][best_idx].item() # Punteggio di similarità
+        best_sentence = testi[best_idx] # Testo della domanda più simile
+        best_id = ids[best_idx] # ID della domanda più simile
 
-        # Trovo risposta umana casuale
+        # Trovo risposta umana casuale relativa alla domanda simile
         cursor.execute("""
             SELECT text
             FROM answers

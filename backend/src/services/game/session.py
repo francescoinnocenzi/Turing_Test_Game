@@ -9,6 +9,7 @@ from services.instances.cookie import cookie
 import mariadb
 import services.state as state
 from schemas.session import SessionResponse, AvailableSessionsResponse, SessionInfo
+from services.instances.session_backend import backend
 
 async def create_session(response: Response, request: Request,backend: InMemoryBackend[UUID, SessionData], session_uuid: UUID) -> SessionResponse:
 
@@ -31,7 +32,9 @@ async def create_session(response: Response, request: Request,backend: InMemoryB
     print("Stato backend inizio create session: %s", backend.data)
     data = await request.json()
     mode = data.get("mode", "NULL") 
-    print("➡️ Sono in create_session, mode scelto:", mode)
+
+    print("Sono in create_session, mode scelto:", mode)
+    
     # Resetto le liste a ogni sessione
     state.chat_history = []
     state.previous_questions = []
@@ -40,10 +43,11 @@ async def create_session(response: Response, request: Request,backend: InMemoryB
     cursor = conn.cursor()
     import uuid
     try:
-        # genera un nome univoco della stanza
+        # genera un nome univoco della stanza room seguito da 6 caratteri
         room_name = f"room_{uuid.uuid4().hex[:6]}"
         #mode
         is_available = True
+
         if mode == "multi":
             mode = "MULTIPLAYER"
         elif mode == "single":
@@ -51,6 +55,7 @@ async def create_session(response: Response, request: Request,backend: InMemoryB
             is_available = False
         else:
             raise HTTPException(status_code=400, detail="Modalità non valida")
+        
         # verifica che non esista già
         cursor.execute("SELECT id FROM sessions WHERE room_name = ? and mode = ?", (room_name,mode,))
         if cursor.fetchone():
@@ -64,11 +69,10 @@ async def create_session(response: Response, request: Request,backend: InMemoryB
         old_data = await backend.read(session_uuid)
         print("📌 old_data trovato:", old_data)
         if not old_data:
-            raise HTTPException(status_code=404, detail="Session not found")
+            raise HTTPException(status_code=404, detail="Sessione non trovata")
 
         updated = old_data.model_copy(update={
             "session_id": db_session_id,
-            "room_name": room_name
         })
         await backend.update(session_uuid, updated)     
 
@@ -107,17 +111,19 @@ async def join_session(room_name: str, backend: InMemoryBackend[UUID, SessionDat
     conn = create_db_connection()
     cursor = conn.cursor()
     try:
+        # Player recupera ID sessione creato dal giudice per la stanza scelta
         cursor.execute("SELECT id FROM sessions WHERE room_name = ? and mode = ?", (room_name,"MULTIPLAYER"))
         row = cursor.fetchone()
+
         if not row:
             raise HTTPException(status_code=404, detail="Partita non trovata")
         db_session_id = row[0]
-        print("➡️ Sto per unirmi alla sessione con id:", db_session_id)
+        print("Sto per unirmi alla sessione con id:", db_session_id)
 
-        # aggiorno SessionData del player
+        # Aggiorno SessionData con l'ID della sessione a cui sta partecipando (fino ad ora è None)
         old_data = await backend.read(session_uuid)
         if not old_data:
-            raise HTTPException(status_code=404, detail="User session not found")
+            raise HTTPException(status_code=404, detail="Sessione non trovata")
 
         updated = old_data.model_copy(update={"session_id": db_session_id})
         await backend.update(session_uuid, updated)
@@ -150,7 +156,7 @@ async def available_sessions() -> AvailableSessionsResponse:
     conn = create_db_connection()
     cursor = conn.cursor()
     try:
-        # 🔹 Pulisce le stanze vecchie (più di 120 secondi)
+        # Pulisce le stanze vecchie (più di 120 secondi)
         cursor.execute("""
             UPDATE sessions
             SET is_available = FALSE
@@ -159,7 +165,7 @@ async def available_sessions() -> AvailableSessionsResponse:
         """)
         conn.commit()
 
-        # 🔹 Prende solo le stanze ancora disponibili
+        # Prende solo le stanze ancora disponibili
         cursor.execute("""
             SELECT id, room_name, created_at 
             FROM sessions 
@@ -173,6 +179,7 @@ async def available_sessions() -> AvailableSessionsResponse:
             for row in rows
         ]
 
+        # Lista delle sessioni disponibili
         response = AvailableSessionsResponse(available_sessions=sessions)
         
         return response
@@ -180,10 +187,34 @@ async def available_sessions() -> AvailableSessionsResponse:
     finally:
         cursor.close()
         conn.close()
-    
-async def setup_session(websocket: WebSocket, cookie: CookieParameters, backend: InMemoryBackend[UUID, SessionData]):
+
+async def get_data_session_http(session_uuid: UUID = Depends(cookie), backend: InMemoryBackend[UUID, SessionData] = Depends()):
     """
-    Verifica la sessione del player dal cookie e ritorna session_id e user_id.
+    Verifica la sessione del player dal cookie con connessione HTTP e ritorna session_id e user_id.
+
+    Args
+        session_uuid (UUID): UUID della sessione.
+        backend (InMemoryBackend[UUID, SessionData]): Backend in memoria per le sessioni.
+
+    Returns
+        Tuple[Optional[int], Optional[int]]: session_id e user_id, None se non trovati.
+    """
+    try:
+        print(f"Session UUID verificato: {session_uuid}")
+
+        stored_data = await backend.read(session_uuid)
+        if stored_data:
+            return stored_data.session_id, stored_data.user_id
+        else:
+            print("Dati sessione non trovati")
+            return None, None
+    except Exception as e:
+        print(f"Errore verifica sessione: {e}")
+        return None, None
+
+async def get_data_session_ws(websocket: WebSocket, cookie: CookieParameters, backend: InMemoryBackend[UUID, SessionData]):
+    """
+    Verifica la sessione del player dal cookie con connessione WS e ritorna session_id e user_id.
 
     Args
         websocket (WebSocket): Connessione WebSocket del client.
@@ -195,14 +226,14 @@ async def setup_session(websocket: WebSocket, cookie: CookieParameters, backend:
     """
     try:
         session_uuid = cookie(websocket)
-        print(f"✅ Session UUID verificato: {session_uuid}")
+        print(f"Session UUID verificato: {session_uuid}")
 
         stored_data = await backend.read(session_uuid)
         if stored_data:
             return stored_data.session_id, stored_data.user_id
         else:
-            print("⚠️ Dati sessione non trovati")
+            print("Dati sessione non trovati")
             return None, None
     except Exception as e:
-        print(f"❌ Errore verifica sessione: {e}")
+        print(f"Errore verifica sessione: {e}")
         return None, None

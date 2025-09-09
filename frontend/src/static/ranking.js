@@ -4,11 +4,15 @@ const refreshBtn = document.getElementById("refresh-ranking");
 async function loadRanking() {
     try {
         container.innerHTML = "<p>Caricamento classifica...</p>";
-        const response = await fetch("http://localhost:8003/ranking");
+        const response = await fetch("http://localhost:8003/ranking", {
+            method: "GET",
+            credentials: "include"
+        });
         if (!response.ok) throw new Error("Errore nel recupero della classifica");
 
         const data = await response.json();
         const ranking = data.ranking;
+        const my_score = data.my_score;
 
         if (ranking.length === 0) {
             container.innerHTML = "<p>Nessuna classifica disponibile.</p>";
@@ -29,6 +33,10 @@ async function loadRanking() {
                         <td>${player.total_score}</td>
                     </tr>`;
         });
+
+        if(my_score){
+            document.getElementById("my-score").innerText = my_score;
+        }
 
         html += `</table>`;
         container.innerHTML = html;

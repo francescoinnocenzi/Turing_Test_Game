@@ -2,13 +2,13 @@ from database.connection import create_db_connection
 
 def handle_scores(user_id: int, session_id: int, mode: str, role : str, win: bool) -> None:
     """
-    Aggiorna i punteggi dei giocatori in base al risultato della partita.
+    Inserisce i punteggi dei giocatori nel database in base al risultato della partita.
 
     Args
         user_id (int): ID dell'utente che ha effettuato l'azione (giudice o player).
         session_id (int): ID della sessione di gioco corrente.
         mode (str): Modalità di gioco, "single" o "multi".
-        role (str): Ruolo dell'utente ("HUMAN" o "JUDGE").
+        role (str): Ruolo dell'utente ("PLAYER" o "JUDGE").
         win (bool): Indica se il ruolo specificato ha vinto la partita.
 
     Raises
@@ -55,22 +55,24 @@ def handle_scores(user_id: int, session_id: int, mode: str, role : str, win: boo
             
             player_user_id = row[0] if row else None
 
+            # Inserisco punteggio player
             cursor.execute("""
                 INSERT INTO scores (user_id, session_id, score, mode, player_role) 
                 VALUES (?, ?, ?, ?, ?)
-            """, (player_user_id, session_id, human_score, mode, "HUMAN")) #il player è sempre umano in multiplayer
+            """, (player_user_id, session_id, human_score, mode, "PLAYER"))
             conn.commit()
 
-            print(f"Punteggi aggiornati: User {player_user_id}, Session {session_id}, Score {human_score}, Mode {mode}, Role HUMAN")
+            print(f"Punteggi aggiornati: User {player_user_id}, Session {session_id}, Score {human_score}, Mode {mode}, Role PLAYER")
         elif mode == "SINGLEPLAYER":
+            # win fa riferimento al giudice
             score = 0 #punteggio dell'unico giocatore
             if role == "JUDGE" and win:
                 score = 2
             elif role == "JUDGE" and not win:
                 score = 0
-            elif role == "HUMAN" and win:
+            elif role == "PLAYER" and win:
                 score = 0
-            elif role == "HUMAN" and not win:
+            elif role == "PLAYER" and not win:
                 score = 1
             else:
                 print("Errore Aggiornamento Punteggi: In singleplayer")

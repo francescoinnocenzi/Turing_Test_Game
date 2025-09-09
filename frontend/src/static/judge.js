@@ -4,6 +4,7 @@ let ws = null;
 let clientId = Math.floor(Math.random() * 100000);
 let lastQuestion = null;
 let questionCounter = 0;
+let role = "JUDGE";
 
 document.getElementById("questionInput").addEventListener("keydown", function(e) {
     if (e.key === "Enter") {
@@ -13,14 +14,14 @@ document.getElementById("questionInput").addEventListener("keydown", function(e)
 })
 
 function setupWebSocket(roomName) {
-    const url = `ws://localhost:8003/ws/${roomName}/${clientId}?role=JUDGE&mode=single`;
-    console.log("🔌 Connessione a:", url);
+    const url = `ws://localhost:8003/ws/${roomName}/${clientId}?role=${role}&mode=single`;
+    console.log("Connessione a:", url);
 
     ws = new WebSocket(url);
 
     ws.onopen = () => {
         document.getElementById("room-id").textContent = roomName;
-        document.getElementById("ws-id").textContent = clientId;
+        // document.getElementById("ws-id").textContent = clientId;
         console.log("Connesso come JUDGE");
     };
 
@@ -78,7 +79,7 @@ function setupWebSocket(roomName) {
                 console.log(judgeResult);
 
                 if (judgeResult) {
-                    showResultModal(judgeResult, 'single', 'judge');
+                    showResultModal(judgeResult, 'single', 'judge','JUDGE');
                 }
             }else if (data.type === "all_answered") {//DA SISTEMARE
                 console.log("Tutti i player hanno risposto!");
@@ -90,13 +91,15 @@ function setupWebSocket(roomName) {
                     const li = document.createElement("li");
                     li.textContent = ans.text;
 
-                    if (ans.player_role === currentPositions.left.type) {
+                    console.log("STAMPA", currentPositions, ans.player_type);
+
+                    if (ans.player_type === currentPositions.left.type) {
                         li.className = "playerA";
-                        li.innerHTML = `<strong>A (${ans.player_role})</strong>: ${ans.text}`;
+                        li.innerHTML = `<strong>A (${ans.player_type})</strong>: ${ans.text}`;
                         document.getElementById("messagesA").appendChild(li);
-                    } else if (ans.player_role === currentPositions.right.type) {
+                    } else if (ans.player_type === currentPositions.right.type) {
                         li.className = "playerB";
-                        li.innerHTML = `<strong>B (${ans.player_role})</strong>: ${ans.text}`;
+                        li.innerHTML = `<strong>B (${ans.player_type})</strong>: ${ans.text}`;
                         document.getElementById("messagesB").appendChild(li);
                     }
 
@@ -168,7 +171,7 @@ function sendQuestion() {
     // Invia la domanda al server (includiamo un qid nel payload)
     const msg = { type: "question", text: text };
     ws.send(JSON.stringify(msg));
-    console.log("📨 Domanda inviata:", text);
+    console.log("Domanda inviata:", text);
 
     // Pulisci l'input
     input.value = "";
@@ -186,7 +189,7 @@ function submitJudgment() {
         return;
     }
 
-    console.log("📤 Giudizio inviato:", chosen.value);
+    console.log("Giudizio inviato:", chosen.value);
 
     // Invia solo la scelta al backend via WebSocket
     ws.send(JSON.stringify({
@@ -216,7 +219,6 @@ window.submitJudgment = submitJudgment;
 window.sendQuestion = sendQuestion;
 
 
-// NUOVA FUNZIONE: Chiudi modale
 function closeResultModal() {
     if (window.currentModal) {
         window.currentModal.remove();

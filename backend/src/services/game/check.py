@@ -8,7 +8,7 @@ import services.state as state
 
 from typing import Any
 
-async def check_all_answered(question_id: int, room_name: str, session_id: int, role: str, mode: str) -> None:
+async def check_all_answered(question_id: int, room_name: str, session_id: int, role: str, mode: str, user_id: int) -> None:
     """
     Notifica il giudice quando tutti i player hanno risposto e, se necessario,
     genera automaticamente la prossima domanda in modalità single.
@@ -39,15 +39,13 @@ async def check_all_answered(question_id: int, room_name: str, session_id: int, 
 
         # Conta risposte per la domanda corrente
         cursor.execute("""
-            SELECT COUNT(*) as total_answers,
-                   COUNT(CASE WHEN author_type = 'HUMAN' THEN 1 END) as human_answers,
-                   COUNT(CASE WHEN author_type = 'BOT' THEN 1 END) as bot_answers
+            SELECT COUNT(*) as total_answers
             FROM answers 
             WHERE question_id = ?
         """, (question_id,))
-        
-        total_answers, human_answers, bot_answers = cursor.fetchone()
-        print(f"Risposte ricevute: {total_answers}/2 (Human: {human_answers}, Bot: {bot_answers})")
+
+        total_answers = cursor.fetchone()[0]
+        print(f"Risposte ricevute: {total_answers}/2")
 
         if total_answers >= 2:  # Entrambi hanno risposto
             print("Tutti hanno risposto!")
@@ -56,11 +54,11 @@ async def check_all_answered(question_id: int, room_name: str, session_id: int, 
                 "message": "Tutti hanno risposto! Puoi inviare la prossima domanda." 
             }, room_name)
 
-            if role == "HUMAN" and mode == "single" and question_count < MAX_QUESTIONS:
+            if role == "PLAYER" and mode == "single" and question_count < MAX_QUESTIONS:
                 await auto_generate_next_question(room_name, session_id)
             
             if question_count >= MAX_QUESTIONS:
-                await check_and_finalize_game(session_id, room_name, question_count, MAX_QUESTIONS, role, mode)
+                await check_and_finalize_game(session_id, room_name, question_count, MAX_QUESTIONS, role, mode, user_id)
 
         cursor.close()
         conn.close()
@@ -69,7 +67,7 @@ async def check_all_answered(question_id: int, room_name: str, session_id: int, 
         print(f"Errore in check_all_answered: {e}")
 
 
-async def check_and_finalize_game(session_id: int, room_name: str, question_count: int, max_questions: int, role: str, mode: str) -> None:
+async def check_and_finalize_game(session_id: int, room_name: str, question_count: int, max_questions: int, role: str, mode: str, user_id: int) -> None:
     """
     Controlla se il numero massimo di domande è stato raggiunto e, se sì,
     esegue il giudizio finale e notifica i giocatori.
@@ -90,17 +88,18 @@ async def check_and_finalize_game(session_id: int, room_name: str, question_coun
         Exception: Propaga altri errori generici durante l'invio dei messaggi.
     """
 
-    if mode == "single" and role == "HUMAN":
+    # Caso giudice LLM
+    if mode == "single" and role == "PLAYER":
         # Fine partita - esegui giudizio
         judgment_result = await get_llm_judgment(session_id)
 
         #Aggiusto punteggi
         if judgment_result.judge_result == "GIUDICE ha VINTO":
-            print(f"GIUDICE LLM ha indovinato con user {state.user_id}")
-            handle_scores(user_id= state.user_id, session_id=session_id, mode="single",role=role, win=True) 
+            print(f"GIUDICE LLM ha indovinato con user {user_id}")
+            handle_scores(user_id=user_id, session_id=session_id, mode="single",role=role, win=True) 
         elif judgment_result.judge_result == "GIUDICE ha PERSO":
-            print(f"GIUDICE LLM ha sbagliato con user {state.user_id}")
-            handle_scores(user_id= state.user_id, session_id=session_id, mode="single",role=role, win=False)
+            print(f"GIUDICE LLM ha sbagliato con user {user_id}")
+            handle_scores(user_id=user_id, session_id=session_id, mode="single",role=role, win=False)
         else:
             raise HTTPException(status_code=500, detail="Errore nei punteggi del giudizio LLM")
         # Invia risultato finale

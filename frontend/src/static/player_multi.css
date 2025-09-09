@@ -1,0 +1,210 @@
+*{
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Share Tech Mono', monospace;
+    background: linear-gradient(135deg, #0f0f23 0%, #16213e 25%, #1a1a2e 50%, #0f0f23 100%);
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+
+}
+
+.mode-badge{
+    text-shadow: 0 0 10px #00ffffc1;
+    text-align: center;
+    margin-bottom: 2rem;
+    font-size: 3rem;
+    font-weight: 700;
+    color: #00ffff;
+    font-family: 'Share Tech Mono', monospace;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        linear-gradient(rgba(0, 255, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 50px 50px;
+    pointer-events: none;
+    z-index: -1;
+}
+
+a{
+    text-decoration: none;
+}
+
+.container {
+    width: 80%;
+    background: rgba(0, 255, 255, 0.03);
+    backdrop-filter: blur(5px);
+    border-radius: 12px;
+    padding: 2rem;
+    border: 1px solid rgba(0, 255, 255, 0.2);
+}
+
+h1 { 
+    font-size:2.5rem; 
+    color:#333; 
+    margin-bottom:2rem; 
+    text-align:center; 
+}
+.status-info {
+        background: rgba(0, 255, 255, 0.1);
+    padding: 1rem;
+    border-radius: 10px;
+    font-size: 1.2rem;
+    font-weight: 500;
+    border: 1px solid rgba(0, 255, 255, 0.2);
+    color: white;
+    font-family: 'Share Tech Mono', monospace;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    font-weight: bold;
+}
+.current-question { 
+    font-size:1.4rem; 
+    background:#fff7e6; 
+    border:2px dashed #f0ad4e; 
+    color:#663c00; 
+    font-weight:700; 
+    padding:1.8rem; 
+    border-radius:15px; 
+    margin-bottom:2rem; 
+    text-align:center;
+    box-shadow:0 5px 15px rgba(0,0,0,0.08);
+}
+    .answer-form {
+    /* padding: 1.5rem; */
+    margin-bottom: 2rem;
+}
+
+.answer-form form {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+.answer-form input { 
+    flex: 1;
+    padding: 1rem;
+    border-radius: 25px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    color: #333;
+    outline: none;
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    background: rgba(0, 255, 255, 0.05);
+    border-radius: 8px;
+    font-family: 'Share Tech Mono', monospace;
+    transition: all 0.2s;
+    color: #e0e0e0;
+}
+.answer-form button { 
+    background: #00ffff;
+    color: black;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 25px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    opacity: 1;
+}
+.answer-form button:disabled {
+    background: #bbb;
+    cursor: not-allowed;
+}
+.answer-form button:hover:not(:disabled) { 
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+    /* Modale per il risultato finale */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 20px;
+    padding: 3rem;
+    max-width: 500px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    animation: slideInUp 0.4s ease;
+}
+
+.result-win .modal-content {
+    background: linear-gradient(135deg, #00b894, #00a085);
+    color: white;
+}
+
+.result-lose .modal-content {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white;
+}
+
+.result-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.result-title {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+}
+
+.result-message {
+    font-size: 1.2rem;
+    margin-bottom: 2rem;
+    opacity: 0.9;
+}
+
+.result-details {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 1rem;
+    border-radius: 10px;
+    margin-bottom: 2rem;
+    font-size: 1rem;
+}
+
+.close-button {
+    background: rgba(255, 255, 255, 0.9);
+    color: #333;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.close-button:hover {
+    background: white;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}

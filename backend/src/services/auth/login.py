@@ -45,19 +45,17 @@ async def login(login_request: LoginRequest, response: Response, cookie: Session
         if not bcrypt.checkpw(password.encode("utf-8"), stored_password.encode("utf-8")):
             raise HTTPException(status_code=401, detail="Password errata")    
         
-        state.user_id = user[0]  # aggiorna il valore globale condiviso
         user_id = user[0]  # id
         print("Logged user_id:", user_id)
         
-        session_uuid = uuid4()
+        session_uuid = uuid4() # Genero un UUID per la sessione, ovvero stringa univoca (cambia per ogni login)
         data = SessionData(user_id=user_id)   # session_id ancora None
-        await backend.create(session_uuid, data)
+        await backend.create(session_uuid, data) # è un dizionario che associa l'UUID alla SessionData
 
-        cookie.attach_to_response(response, session_uuid)
+        cookie.attach_to_response(response, session_uuid) # Manda il cookie di sessione, quando l'utente effettua il login
 
-        print("👉 Creo sessione con UUID:", session_uuid)
-        print("👉 Dentro SessionData:", data.dict())
-
+        print("Creo sessione con UUID:", session_uuid)
+        print("Dentro SessionData:", data.dict())
 
         return LoginResponse(status="ok")
     

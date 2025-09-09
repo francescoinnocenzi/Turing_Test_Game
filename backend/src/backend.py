@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Depends, WebSocketDisconnect, WebSocket, HTTPException, Form, Response
+from fastapi import FastAPI, Request, Depends, WebSocketDisconnect, WebSocket, HTTPException, Form, Response, Request
 from uuid import UUID
 
 from fastapi_sessions.frontends.implementations import SessionCookie, CookieParameters
@@ -86,8 +86,8 @@ async def handle_websocket_endpoint(websocket: WebSocket, room_name: str, client
     return await ws_entrypoint(websocket, room_name, client_id, cookie, backend, manager)
 
 @app.post("/ask", response_model=ResponseAPI)
-def handle_ask_with_memory() -> ResponseAPI:
-    return ask_with_memory()
+def handle_ask_with_memory(request: RequestAPI) -> ResponseAPI:
+    return ask_with_memory(request)
 
 @app.post("/question/llm", response_model=dict[str, str])
 def handle_create_question_llm() -> dict[str, str]:
@@ -111,5 +111,5 @@ async def handle_available_sessions() -> AvailableSessionsResponse:
     return await available_sessions()
 
 @app.get("/ranking", response_model=RankingResponse)
-def handle_ranking() -> RankingResponse:
-    return get_ranking()
+async def handle_ranking(request: Request, session_uuid: UUID = Depends(cookie)) -> RankingResponse:
+    return await get_ranking(request, session_uuid)

@@ -78,7 +78,7 @@ class ConnectionManager:
         """
         room = self.rooms.get(room_name, {})
 
-        players = sum(1 for c in room.values() if c["role"] == "HUMAN")
+        players = sum(1 for c in room.values() if c["role"] == "PLAYER")
         judge_connected = any(c["role"] == "JUDGE" for c in room.values())
 
         message = {
@@ -143,14 +143,14 @@ class ConnectionManager:
         sent_count = 0
         for client_id, client_data in room.items():
             # Invia solo ai player (HUMAN e BOT), non al giudice
-            if client_data["role"] in ["HUMAN", "BOT"]:
+            if client_data["role"] in ["PLAYER", "BOT"]:
                 await client_data["ws"].send_text(message)
-                print(f"  → Sent to client {client_id} ({client_data['role']})")
+                print(f"Sent to client {client_id} ({client_data['role']})")
                 sent_count += 1
         
         print(f"Question sent to {sent_count} players")
 
-    async def send_answer_to_judge(self, answer: str, room_name: str, player_role: int):
+    async def send_answer_to_judge(self, answer: str, room_name: str, player_type: str):
         """
         Invia una risposta dal player al giudice
 
@@ -169,7 +169,7 @@ class ConnectionManager:
                 try:
                     message = {
                         "type": "player_answer",
-                        "player_role": player_role,
+                        "player_type": player_type,
                         "text": answer
                     }
                     await client_data["ws"].send_text(json.dumps(message))

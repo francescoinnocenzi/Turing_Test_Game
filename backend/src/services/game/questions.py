@@ -21,7 +21,7 @@ def create_question(request: QuestionRequest) -> QuestionResponse:
     """
     conn = create_db_connection()
     cursor = conn.cursor()
-    model = get_model()  # carica il modello una volta (lazy loading)
+    model = get_model() 
     
     try:
         # 1. Calcolo embedding della domanda

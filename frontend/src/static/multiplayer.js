@@ -1,5 +1,3 @@
-console.log("✅ multiplayer.js caricato correttamente");
-
 async function createJudgeSession() {
     try {
         const response = await fetch("http://localhost:8003/create/session", {
@@ -61,7 +59,7 @@ async function joinRoom(roomName) {
         });
 
         if (response.status === 409) {
-            alert("⚠️ La stanza è già occupata, scegline un’altra.");
+            alert("La stanza è già occupata, scegline un’altra.");
             return;
         }
 

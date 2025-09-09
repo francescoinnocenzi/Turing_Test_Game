@@ -2,7 +2,7 @@ import { getRoomNameFromUrl, showResultModal } from "./utils.js";
 
 let ws = null;
 let clientId = Math.floor(Math.random()*100000);
-let role = 'HUMAN'; 
+let role = 'PLAYER'; 
 let pendingQuestions = [];
 let currentQuestionId = null;
 
@@ -57,7 +57,7 @@ ws.onmessage = (event) => {
         }
 
         if (playerResult) {
-            showResultModal(playerResult, 'multi', 'player_multi');
+            showResultModal(playerResult, 'multi', 'player_multi','PLAYER');
         }
     }else if(data.type === "players_update"){
         const judgeCount = document.getElementById("judge-count");
@@ -81,7 +81,7 @@ function disableForm(){
     document.getElementById("messageText").placeholder = "⏳ Attendi la domanda del giudice...";
 }
 
-// 🚀 Invio risposta al server
+// Invio risposta al server
 document.getElementById("messageForm").addEventListener("submit", (e) => {
     e.preventDefault(); // evita reload form
     const input = document.getElementById("messageText");

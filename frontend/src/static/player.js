@@ -5,6 +5,7 @@ let ws = null;
 let mode = null;
 let clientId = Math.floor(Math.random() * 100000);
 let currentQuestionId = null;
+let role = 'PLAYER';
 let currentAnswer = null;
 
 
@@ -16,13 +17,13 @@ function setupWebSocket(selectedRoom) {
         ws.close();
     }
 
-    const url = `ws://localhost:8003/ws/${selectedRoom}/${clientId}?role=HUMAN&mode=${mode}`;
+    const url = `ws://localhost:8003/ws/${selectedRoom}/${clientId}?role=${role}&mode=${mode}`;
     console.log("Connessione a:", url);
 
     ws = new WebSocket(url);
 
     ws.onopen = () => {
-        console.log(`Connesso come HUMAN in modalità ${mode}, stanza: ${selectedRoom}`);
+        console.log(`Connesso come PLAYER in modalità ${mode}, stanza: ${selectedRoom}`);
         document.getElementById("room-id").textContent = `${selectedRoom.toUpperCase()} - ${mode.toUpperCase()}`;
     };
 
@@ -74,7 +75,7 @@ function setupWebSocket(selectedRoom) {
                 console.log(playerResult);
 
                 if (playerResult) {
-                    showResultModal(playerResult, 'single', 'player');
+                    showResultModal(playerResult, 'single', 'player','PLAYER');
                 }
                         
             } else {
@@ -86,19 +87,19 @@ function setupWebSocket(selectedRoom) {
             }
         } catch (e) {
             const messages = document.getElementById('messages');
-            const message = document.createElement('li');
-            message.textContent = event.data;
-            messages.appendChild(message);
-            messages.scrollTop = messages.scrollHeight;
+            if (messages) {
+                const message = document.createElement('li');
+                message.textContent = msg.text || event.data;
+                messages.appendChild(message);
+                messages.scrollTop = messages.scrollHeight;
+            }
+
         }
     };
 }
 
 const roomName = getRoomNameFromUrl();
-
-window.onload = function(){
-    setupWebSocket(roomName);
-}
+setupWebSocket(roomName);
 
 // --- invio messaggi ---
 document.getElementById('messageForm').addEventListener('submit', sendMessage);
@@ -139,12 +140,11 @@ function sendMessage(event) {
         return false;
     }
 
+    // Garantisce che la pagina non si ricarichi e la chat continui a funzionare.
     return false;
 }
 
 
-
-// NUOVA FUNZIONE: Chiudi modale
 function closeResultModal() {
     if (window.currentModal) {
         window.currentModal.remove();

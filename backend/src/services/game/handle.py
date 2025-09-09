@@ -27,8 +27,8 @@ async def assign_and_send_positions(room_name: str, manager: ConnectionManager) 
     Returns
         Dizionario con le posizioni assegnate, es.:
             {
-                "left": {"type": "HUMAN", "id": "player_human"},
-                "right": {"type": "BOT", "id": "player_bot"}
+                "left": {"type": "HUMAN"},
+                "right": {"type": "BOT"}
             }
     """
     if room_name in state.room_positions:
@@ -37,8 +37,8 @@ async def assign_and_send_positions(room_name: str, manager: ConnectionManager) 
 
     # Definisci i giocatori
     players = [
-        {"type": "HUMAN", "id": "player_human"},
-        {"type": "BOT", "id": "player_bot"}
+        {"type": "HUMAN"},
+        {"type": "BOT"}
     ]
 
     # Mischia l'ordine
@@ -58,14 +58,13 @@ async def assign_and_send_positions(room_name: str, manager: ConnectionManager) 
 
 
 #Gestione della domanda in arrivo (singleplayer)
-async def handle_question(room_name: str, websocket, role: str, message: Dict[str, str], mode: str, session_id: int, user_id: int) -> None:
+async def handle_question(room_name: str, role: str, message: Dict[str, str], mode: str, session_id: int, user_id: int) -> None:
     """
     Salva la domanda, assegna posizioni ai giocatori, invia la domanda ai client,
     genera risposte dei bot e verifica se tutti hanno risposto.
 
     Args
         room_name (str): Nome della stanza.
-        websocket (Any): WebSocket del mittente.
         role (str): Ruolo del mittente ("HUMAN" o "JUDGE").
         message (Dict[str, str]): Messaggio contenente il testo della domanda.
         mode (str): Modalità di gioco ("single" o "multi").
@@ -110,14 +109,13 @@ async def handle_question(room_name: str, websocket, role: str, message: Dict[st
     ))
     await manager.send_answer_to_judge(bot1_resp, room_name, "BOT")
     print(f" BOT-LLM answer sent: {bot1_resp}")  
-    
+
+    # Ho ricevuto una domanda da giudice (se sto in single, genero altra riposta HUMAN)
     if mode == "single":
         # BOT 2 (retrieval o fallback LLM)
         bot2_data = await trova_simile(q_req)
         bot2_resp = bot2_data.risposta_trovata
         
-        #Salva risposta bot retrival solo se generata da LLM (perche HUMAN è gia presente nel DB)
-
         create_answer(AnswerRequest(
             question_id=saved_q.id,
             session_id=session_id,
@@ -129,10 +127,10 @@ async def handle_question(room_name: str, websocket, role: str, message: Dict[st
         await manager.send_answer_to_judge(bot2_resp, room_name, "HUMAN") #metto 1 perche risponde al posto di HUMAN
         print(f" BOT-Retrieval answer sent: {bot2_resp}")  # <-- log
 
-    await check_all_answered(saved_q.id, room_name, session_id=session_id, role=role, mode=mode)
+    await check_all_answered(saved_q.id, room_name, session_id=session_id, role=role, mode=mode, user_id=user_id)
 
 #Gestione della risposta inviata singleplayer
-async def handle_answer(room_name: str, websocket: ConnectionManager, role: str, message: Dict[str, Any], mode: str, session_id: int, user_id: int) -> None:
+async def handle_answer(room_name: str, role: str, message: Dict[str, Any], mode: str, session_id: int, user_id: int) -> None:
     """
     Gestisce l'arrivo di una risposta da un player.
 
@@ -141,7 +139,6 @@ async def handle_answer(room_name: str, websocket: ConnectionManager, role: str,
 
     Args
         room_name (str): Nome della stanza.
-        websocket (ConnectionManager): WebSocket del mittente.
         role (str): Ruolo del mittente ("HUMAN" o "JUDGE").
         message (Dict[str, Any]): Messaggio contenente text e question_id.
         mode (str): Modalità di gioco ("single" o "multi").
@@ -158,7 +155,7 @@ async def handle_answer(room_name: str, websocket: ConnectionManager, role: str,
 
     print(f" Risposta da {role}: {text} mode : {mode}")
 
-    await manager.send_answer_to_judge(text, room_name, role)
+    await manager.send_answer_to_judge(text, room_name, "HUMAN")
 
     if question_id:
         create_answer(AnswerRequest(
@@ -166,28 +163,20 @@ async def handle_answer(room_name: str, websocket: ConnectionManager, role: str,
             session_id=session_id,
             text=text,
             author_user_id=user_id,
-            author_type=role,
+            author_type="HUMAN",
             room_name=room_name
         ))
     
-    # Usa la funzione centralizzata per verificare se tutti hanno risposto
-    await check_all_answered(question_id, room_name, session_id=session_id, role=role, mode=mode)
+    # Usa la funzione centralizzata per verificare se tutti hanno risposto, perché giudice è LLM e devo capire se posso generare la prossima domanda
+    await check_all_answered(question_id, room_name, session_id=session_id, role=role, mode=mode, user_id=user_id)
 
-async def handle_raw_text(room_name, client_id, role, text, mode, session_id):
-    print(f" Raw text da {role}: {text}")
-    if role == "JUDGE":
-        await handle_question(room_name, role, {"text": text}, None, mode, session_id=session_id)
-    else:
-        await handle_answer(room_name, role, {"text": text}, None, mode, session_id=session_id)
-
-async def handle_message(msg_type: str, room_name: str, websocket, role: str, message: Dict[str, Any], mode: str, session_id: int, user_id: int, manager: ConnectionManager):
+async def handle_message(msg_type: str, room_name: str, role: str, message: Dict[str, Any], mode: str, session_id: int, user_id: int, manager: ConnectionManager):
     """
     Smista il messaggio al corretto handler in base al tipo.
 
     Args
         msg_type (str): Tipo del messaggio ("question", "answer", "judge_choice").
         room_name (str): Nome della stanza.
-        websocket (Any): WebSocket del mittente.
         role (str): Ruolo del mittente.
         message (Dict[str, Any]): Messaggio ricevuto.
         mode (str): Modalità di gioco.
@@ -204,12 +193,14 @@ async def handle_message(msg_type: str, room_name: str, websocket, role: str, me
         "judge_choice": handle_judge_choice,
     }
 
+    # Controllo che msg_type ricevuto rientri nei messaggi gestiti
     if msg_type in handlers:
         handler = handlers[msg_type]
+        
         if msg_type == "judge_choice":
-            await handler(room_name, message, session_id, user_id, manager, role, mode)
+            await handler(room_name=room_name, message=message, session_id=session_id, user_id=user_id, manager=manager, role=role, mode=mode)
         else:
-            await handler(room_name, websocket, role, message, mode, session_id, user_id)
+            await handler(room_name=room_name, message=message, session_id=session_id, user_id=user_id, role=role, mode=mode)
     else:
         print(f"Messaggio sconosciuto: {msg_type}")
 from typing import Any, Dict
@@ -241,12 +232,14 @@ async def handle_judge_choice(room_name: str, message: Dict[str, Any], session_i
     result_judgment = create_judgment(judgment_req)
     judge_choice = result_judgment.chosen_player_human
 
+    # Recupera le posizioni assegnate
     positions = state.room_positions.get(room_name)
     if not positions:
         print("ERRORE: posizioni non trovate per la room")
         return
-
+    # Se GIUDICE sceglie "A" prendi il tipo del giocatore a sinistra, se sceglie "B" prendi il tipo del giocatore a destra
     chosen_type = positions["left"]["type"] if judge_choice == "A" else positions["right"]["type"]
+    # Se il tipo scelto è "HUMAN", ha indovinato
     correct_answer = (chosen_type == "HUMAN")
 
     print(f"SCELTA FRONTEND: {judge_choice} → {chosen_type}")

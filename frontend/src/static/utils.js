@@ -28,7 +28,7 @@ export function createSession(bottone, mode, page) {
 
                 console.log(" Sessione creata:", data);
 
-                // 👉 Passo il room_name come query param
+                // Passo il room_name come query param
                 window.location.href =
                     `/${page}?room=` + encodeURIComponent(data.room_name);
             } else {
@@ -40,7 +40,7 @@ export function createSession(bottone, mode, page) {
     });
 }
 
-export function showResultModal(result, mode, page) {
+export function showResultModal(result, mode, page, role) {
     // Determina se ha vinto o perso
     const hasWon = result.includes("VINTO");
 
@@ -58,11 +58,9 @@ export function showResultModal(result, mode, page) {
                     hasWon ? "HAI VINTO!" : "HAI PERSO!"
                 }</div>
                 <div class="result-details">
-                ${
-                    hasWon
-                        ? "👏 Ottimo intuito! Sei riuscito a riconoscere correttamente chi era umano."
-                        : "😵 Questa volta ti hanno ingannato... hai scambiato il bot per umano o viceversa."
-                }
+                
+                    ${getResultMessage(mode, role, hasWon)}
+                
                 </div>
                 
                 <a href="/index" class="close-button"">
@@ -77,6 +75,20 @@ export function showResultModal(result, mode, page) {
     // Aggiungi al body
     document.body.appendChild(modalOverlay);
 
+function getResultMessage(mode, role, hasWon) {
+
+    if (role === "JUDGE") {
+        return hasWon
+        ? " Ottimo intuito! Sei riuscito a riconoscere correttamente chi era umano."
+        : " Questa volta ti hanno ingannato... hai scambiato il bot per umano o viceversa.";
+    }
+
+    return hasWon
+        ? " 🥳 “Hai vinto! Il giudice non ha sospettato nulla."
+        : " ❌ “Questa volta non ha funzionato: il giudice ti ha smascherato.";
+    }
+
+
     // Solo se non è player_multi, aggiungi l'event listener per "Gioca ancora"
     if (page !== "player_multi") {
         createSession(document.getElementById("play-again"), mode, page);
@@ -85,5 +97,5 @@ export function showResultModal(result, mode, page) {
     // Salva riferimento per poterla chiudere
     window.currentModal = modalOverlay;
 
-    console.log("🎯 Risultato mostrato:", result);
+    console.log("Risultato mostrato:", result);
 }

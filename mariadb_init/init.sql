@@ -8,21 +8,14 @@ CREATE TABLE users (
 );
 
 -- Tabella sessions (sessioni di gioco)
-
 CREATE TABLE IF NOT EXISTS sessions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     room_name VARCHAR(50) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     is_available BOOLEAN NOT NULL DEFAULT TRUE,
-    mode ENUM('SINGLEPLAYER', 'MULTIPLAYER')
-    );
-    -- user_id int NOT NULL,
-    -- FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    -- judge_id VARCHAR(100),
-    -- human_player_id VARCHAR(100),
-    -- bot_player_id VARCHAR(100),
-    -- status ENUM('waiting', 'active', 'completed') DEFAULT 'waiting',
-    -- UNIQUE KEY unique_room_session (room_name, status)
+    mode ENUM('SINGLEPLAYER', 'MULTIPLAYER'),
+    UNIQUE (room_name)
+);
 
 
 -- Tabella questions (domande del giudice)
@@ -31,7 +24,7 @@ CREATE TABLE IF NOT EXISTS questions (
     session_id INT NOT NULL,
     text TEXT NOT NULL,
     room_name VARCHAR(50) NOT NULL,
-    author_user_id INT NULL,  -- se HUMAN, punta a users.id
+    author_user_id INT NULL,  -- se AUTORE è BOT, author_user_id è NULL
     author_type ENUM('HUMAN', 'BOT') NOT NULL,
     embedding JSON NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -46,7 +39,7 @@ CREATE TABLE IF NOT EXISTS answers (
     session_id INT NOT NULL,
     text TEXT NOT NULL,
     room_name VARCHAR(50) NOT NULL,
-    author_user_id INT NULL,
+    author_user_id INT NULL, -- se AUTORE è BOT, author_user_id è NULL
     author_type ENUM('HUMAN', 'BOT', 'BOT_AS_HUMAN') NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE,
@@ -71,7 +64,7 @@ CREATE TABLE scores (
     score INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     mode ENUM('SINGLEPLAYER', 'MULTIPLAYER') NOT NULL,
-    player_role ENUM('HUMAN', 'JUDGE') NOT NULL,
+    player_role ENUM('PLAYER', 'JUDGE') NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
 );

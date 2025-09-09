@@ -6,7 +6,6 @@ model: Optional[SentenceTransformer] = None
 def get_model() -> SentenceTransformer:
     """
     Restituisce un'istanza del modello SentenceTransformer.
-    Carica il modello solo la prima volta (lazy loading).
     
     Returns
         SentenceTransformer: Modello di embedding testuale.

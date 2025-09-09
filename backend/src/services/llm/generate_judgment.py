@@ -125,13 +125,7 @@ async def get_llm_judgment(session_id: int) -> Union["LLMJudgmentResponse", dict
             correct_answer = True
 
         return LLMJudgmentResponse(
-            # correct_answer=correct_answer,
-            # llm_choice=llm_choice,
             judgment=llm_judgment,
-            # session_id=session_id,
-            # human_responses=len(human_responses),
-            # bot_responses=len(bot_responses),
-            # correct_guess="GIUDICE ha VINTO" if correct_answer else "GIUDICE ha PERSO",
             judge_result="GIUDICE ha PERSO" if not correct_answer else "GIUDICE ha VINTO"
         )
         
