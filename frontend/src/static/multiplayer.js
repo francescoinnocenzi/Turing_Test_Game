@@ -1,5 +1,8 @@
+//Funzioni per la gestione del multiplayer
+
+// Funzione per creare una nuova sessione come giudice
 async function createJudgeSession() {
-    try {
+    try { // Chiamata al backend per creare una nuova sessione
         const response = await fetch("http://localhost:8003/create/session", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -13,20 +16,20 @@ async function createJudgeSession() {
         alert("Errore: " + e.message);
     }
 }
-
+// Funzione per aprire il modale di join stanza
 function openModal() {
     document.getElementById("modalOverlay").style.display = "flex";
     loadRooms();
 }
-
+// Funzione per chiudere il modale di join stanza
 function closeModal() {
     document.getElementById("modalOverlay").style.display = "none";
 }
-
+// Funzione per caricare le stanze disponibili dal backend
 async function loadRooms() {
     const roomList = document.getElementById("roomList");
     roomList.innerHTML = "<li>Caricamento...</li>";
-    try {
+    try { // Chiamata al backend per ottenere le stanze disponibili
         const response = await fetch("http://localhost:8003/available/sessions", {
             credentials: "include"
         });
@@ -50,9 +53,9 @@ async function loadRooms() {
     }
 }
 
-
+// Funzione per unirsi a una stanza esistente
 async function joinRoom(roomName) {
-    try {
+    try { // Chiamata al backend per unirsi alla stanza
         const response = await fetch(`http://localhost:8003/join/session/${roomName}`, {
             method: "POST",
             credentials: "include"

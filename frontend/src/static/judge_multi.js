@@ -1,36 +1,37 @@
 import { getRoomNameFromUrl, scrollAllChats, showResultModal } from './utils.js';
-
-let ws = null;
-let clientId = Math.floor(Math.random() * 100000);
-let role = "JUDGE";
-let roomName = getRoomNameFromUrl();
-let pendingAnswers = [];
-let questionCounter = 0;
-let currentPositions = {};
-let lastQuestion = null;
+// Variabili globali
+let ws = null; // WebSocket 
+let clientId = Math.floor(Math.random() * 100000); // ID casuale per il client
+let role = "JUDGE"; // Ruolo fisso per questa pagina    
+let roomName = getRoomNameFromUrl(); // Ottieni il nome della stanza dalla URL
+let pendingAnswers = [];  // Buffer per le risposte in arrivo
+let questionCounter = 0; // Contatore delle domande inviate
+let currentPositions = {}; // Posizioni correnti dei player (left/right)
+let lastQuestion = null;  // Ultima domanda inviata
 
 document.getElementById("room-id").textContent = roomName || "Nessuna";
 
-// Connetti WebSocket solo se ho una room valida
+// Connetti WebSocket solo se ho una room valida e gestisco gli eventi WebSocket
 if (roomName) {
     const url = `ws://localhost:8003/ws/${roomName}/${clientId}?role=${role}&mode=multi`;
+    // Connetti al WebSocket
     ws = new WebSocket(url);
-
+    // Evento quando la connessione viene aperta
     ws.onopen = () =>
         console.log(`Connesso come ${role} nella stanza ${roomName}`);
-
+    // Evento quando arriva un messaggio dal server
     ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
+        const data = JSON.parse(event.data); // Messaggio ricevuto
         const input = document.getElementById("questionInput");
 
         const button = document.querySelector(".send-button");
 
         console.log("Messaggio ricevuto:", data);
         console.log("Ricevuto messaggio:", data.type);
-
-        if (data.type === "player_answer") {
+        // Gestisci i diversi tipi di messaggi
+        if (data.type === "player_answer") {  // Risposta di un player
             pendingAnswers.push(data);
-        } else if (data.type === "time_to_judge") {
+        } else if (data.type === "time_to_judge") { // Tempo di giudicare
             input.disabled = true;
             button.disabled = true;
             input.placeholder = "Partita giunta al termine...";
@@ -44,16 +45,16 @@ if (roomName) {
             </div>
             <button class="confirm-button" onclick="submitJudgment()">Conferma scelta</button>
             </div>`;
-        } else if (data.type === "all_answered") {
+        } else if (data.type === "all_answered") { // Tutti i player hanno risposto
             console.log("Tutti i player hanno risposto!");
 
             console.log(pendingAnswers);
-
+            // Mostra le risposte nelle chat corrette
             pendingAnswers.forEach((ans) => {
                 const li = document.createElement("li");
                 li.textContent = ans.text;
-
-                if (ans.player_type === currentPositions.left.type) {
+                // Determina a quale chat aggiungere la risposta in base al tipo di player
+                if (ans.player_type === currentPositions.left.type) { 
                     li.className = "playerA";
                     li.innerHTML = `<strong>A (${ans.player_type})</strong>: ${ans.text}`;
                     document.getElementById("messagesA").appendChild(li);
@@ -64,21 +65,20 @@ if (roomName) {
                 }
             });
 
-            // Svuota il buffer
+            // Svuota il buffer delle risposte
             pendingAnswers = [];
 
             scrollAllChats();
-
+            // Riabilita l'input per la prossima domanda
             input.disabled = false;
             input.placeholder = "✍️ Scrivi una domanda...";
             button.disabled = false;
-        } else if (data.type === "positions") {
-            // Salva la mappatura arrivata dal backend
-            // Aggiorna le posizioni correnti
+        } else if (data.type === "positions") {  // Mappatura posizioni
+            // Salva la mappatura posizioni arrivata dal backend
             currentPositions.left = data.content.left; // "HUMAN" o "BOT"
             currentPositions.right = data.content.right; // "HUMAN" o "BOT"
             console.log("Posizioni aggiornate:", currentPositions);
-        } else if (data.type === "final_judgment") {
+        } else if (data.type === "final_judgment") { // Giudizio finale
             console.log(data.judgment);
 
             const patterns = ["GIUDICE ha VINTO", "GIUDICE ha PERSO"];
@@ -87,11 +87,11 @@ if (roomName) {
             const judgeResult = patterns.find((p) => data.judgment.includes(p));
 
             console.log(judgeResult);
-
+            // Mostra il risultato in un modale personalizzato
             if (judgeResult) {
                 showResultModal(judgeResult, 'multi', 'judge_multi','JUDGE');
             }
-        } else if (data.type === "players_update") {
+        } else if (data.type === "players_update") { // Aggiornamento numero di player connessi alla stanza
             const playersCount = document.getElementById("players-count");
 
             console.log("Player update", data);
@@ -109,7 +109,7 @@ if (roomName) {
         }
     };
 }
-
+// Funzione per inviare una domanda del giudice al server
 function sendQuestion() {
     const input = document.getElementById("questionInput");
     const button = document.querySelector(".send-button");
@@ -133,7 +133,7 @@ function sendQuestion() {
 
     scrollAllChats();
 
-    // Invia la domanda al server (includiamo un qid nel payload)
+    // Invia la domanda al server
     const msg = { type: "question", text: text };
     ws.send(JSON.stringify(msg));
     console.log("Domanda inviata:", text);
@@ -146,14 +146,14 @@ function sendQuestion() {
 
     button.disabled = true;
 }
-
+// Invia la domanda quando si preme "Invio"
 document.getElementById("questionInput").addEventListener("keydown", function (event) {
     if (event.key === "Enter") {
         event.preventDefault(); // evita che faccia refresh
         sendQuestion();
     }
 });
-
+// Funzione per inviare il giudizio del giudice al server
 function submitJudgment() {
     const selected = document.querySelector(
         'input[name="chosen_player"]:checked'
@@ -166,11 +166,11 @@ function submitJudgment() {
         })
     );
 }
-
+// Rendi le funzioni accessibili globalmente
 window.submitJudgment = submitJudgment;
 window.sendQuestion = sendQuestion;
 
-
+// Funzione per chiudere il modale del risultato
 function closeResultModal() {
     if (window.currentModal) {
         window.currentModal.remove();

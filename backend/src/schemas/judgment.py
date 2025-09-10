@@ -14,6 +14,7 @@ class JudgmentRequest(BaseModel):
     session_id: int
     judge_id: int
     chosen_player_human: str  
+    is_correct: bool
 
 class JudgmentResponse(BaseModel):
     """

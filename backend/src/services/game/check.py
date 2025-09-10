@@ -5,10 +5,11 @@ from services.game.scores import handle_scores
 from services.instances.manager import manager
 from database.connection import create_db_connection
 import services.state as state
+from schemas.service_response import ServiceResponse
 
 from typing import Any
 
-async def check_all_answered(question_id: int, room_name: str, session_id: int, role: str, mode: str, user_id: int) -> None:
+async def check_all_answered(question_id: int, room_name: str, session_id: int, role: str, mode: str, user_id: int) -> ServiceResponse:
     """
     Notifica il giudice quando tutti i player hanno risposto e, se necessario,
     genera automaticamente la prossima domanda in modalità single.
@@ -21,7 +22,7 @@ async def check_all_answered(question_id: int, room_name: str, session_id: int, 
         mode (str): Modalità di gioco ('single' o 'multi').
 
     Returns
-        None
+        ServiceResponse: Oggetto che indica l'esito dell'operazione ("ok" o "error").
 
     Raises:
         Exception: Propaga eventuali errori generati durante l'accesso al database
@@ -35,7 +36,7 @@ async def check_all_answered(question_id: int, room_name: str, session_id: int, 
         cursor.execute("SELECT COUNT(*) FROM questions WHERE session_id = ?", (session_id,))
         question_count = cursor.fetchone()[0]
 
-        MAX_QUESTIONS = 1  # Configurabile
+        MAX_QUESTIONS = 2  # Configurabile
 
         # Conta risposte per la domanda corrente
         cursor.execute("""
@@ -58,19 +59,24 @@ async def check_all_answered(question_id: int, room_name: str, session_id: int, 
                 await auto_generate_next_question(room_name, session_id)
             
             if question_count >= MAX_QUESTIONS:
-                await check_and_finalize_game(session_id, room_name, question_count, MAX_QUESTIONS, role, mode, user_id)
+                response = await check_and_finalize_game(session_id, room_name, question_count, MAX_QUESTIONS, role, mode, user_id)
+                if response.status == "error":
+                    raise HTTPException(status_code=500, detail="Errore durante check_and_finalize_game")
 
         cursor.close()
         conn.close()
+        
+        return ServiceResponse(status="ok")
+
 
     except Exception as e:
         print(f"Errore in check_all_answered: {e}")
+        return ServiceResponse(status="error")
 
 
-async def check_and_finalize_game(session_id: int, room_name: str, question_count: int, max_questions: int, role: str, mode: str, user_id: int) -> None:
+async def check_and_finalize_game(session_id: int, room_name: str, question_count: int, max_questions: int, role: str, mode: str, user_id: int) -> ServiceResponse:
     """
-    Controlla se il numero massimo di domande è stato raggiunto e, se sì,
-    esegue il giudizio finale e notifica i giocatori.
+    Esegue il giudizio finale e notifica i giocatori.
 
     Args
         session_id (int): ID della sessione corrente.
@@ -81,33 +87,42 @@ async def check_and_finalize_game(session_id: int, room_name: str, question_coun
         mode (str): Modalità di gioco ('single' o 'multi').
 
     Returns
-        None
+        ServiceResponse: Oggetto che indica l'esito dell'operazione ("ok" o "error").
 
     Raises
         HTTPException: Se i risultati del giudizio LLM non sono validi.
         Exception: Propaga altri errori generici durante l'invio dei messaggi.
     """
+    try:
+        # Caso giudice LLM
+        if mode == "single" and role == "PLAYER":
+            # Fine partita - esegui giudizio
+            judgment_result = await get_llm_judgment(session_id)
 
-    # Caso giudice LLM
-    if mode == "single" and role == "PLAYER":
-        # Fine partita - esegui giudizio
-        judgment_result = await get_llm_judgment(session_id)
-
-        #Aggiusto punteggi
-        if judgment_result.judge_result == "GIUDICE ha VINTO":
-            print(f"GIUDICE LLM ha indovinato con user {user_id}")
-            handle_scores(user_id=user_id, session_id=session_id, mode="single",role=role, win=True) 
-        elif judgment_result.judge_result == "GIUDICE ha PERSO":
-            print(f"GIUDICE LLM ha sbagliato con user {user_id}")
-            handle_scores(user_id=user_id, session_id=session_id, mode="single",role=role, win=False)
-        else:
-            raise HTTPException(status_code=500, detail="Errore nei punteggi del giudizio LLM")
-        # Invia risultato finale
-        print(f"GIUDIZIO {judgment_result}")
+            #Aggiusto punteggi
+            if judgment_result.judge_result == "GIUDICE ha VINTO":
+                print(f"GIUDICE LLM ha indovinato con user {user_id}")
+                response = handle_scores(user_id=user_id, session_id=session_id, mode="single",role=role, win=True) 
+                if response.status == "error":
+                    raise HTTPException(status_code=500, detail="Errore durante aggiornamento punteggi")
+            elif judgment_result.judge_result == "GIUDICE ha PERSO":
+                print(f"GIUDICE LLM ha sbagliato con user {user_id}")
+                response = handle_scores(user_id=user_id, session_id=session_id, mode="single",role=role, win=False)
+                if response.status == "error":
+                    raise HTTPException(status_code=500, detail="Errore durante aggiornamento punteggi")
+            else:
+                raise HTTPException(status_code=500, detail="Errore nei punteggi del giudizio LLM")
+            # Invia risultato finale
+            print(f"GIUDIZIO {judgment_result}")
+            
+            # Invia il giudizio a tutti i client
+            await manager.send_judgment_to_all(judgment_result.judge_result, room_name)
+            print(f"Giudizio inviato: {judgment_result.judge_result}")
         
-        # Invia il giudizio a tutti i client
-        await manager.send_judgment_to_all(judgment_result.judge_result, room_name)
-        print(f"Giudizio inviato: {judgment_result.judge_result}")
-    
-    if (mode == "single" or mode == "multi"):
-        await manager.send_message_to_all("Scegli chi è UMANO", "time_to_judge", room_name)
+        if (mode == "single" or mode == "multi"):
+            await manager.send_message_to_all("Scegli chi è UMANO", "time_to_judge", room_name)
+        
+        return ServiceResponse(status="ok")
+    except Exception as e:
+        print(f"Errore in check_and_finalize_game: {e}")
+        return ServiceResponse(status="error")

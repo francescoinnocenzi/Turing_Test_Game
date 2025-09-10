@@ -1,6 +1,6 @@
 const form = document.getElementById("loginForm");
 const msg = document.getElementById("msg");
-
+// Gestione della sottomissione del form di login
 form.addEventListener("submit", async (e) => {
     e.preventDefault();
     msg.style.display = "none";
@@ -10,7 +10,7 @@ form.addEventListener("submit", async (e) => {
         password: form.password.value,
     };
 
-    try {
+    try { // Chiamata al backend per il login
         const res = await fetch("http://localhost:8003/api/login", {
             method: "POST",
             headers: {

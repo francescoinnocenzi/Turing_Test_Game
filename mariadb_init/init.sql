@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS judgments (
     session_id INT NOT NULL,
     judge_id INT NOT NULL,
     chosen_player_human VARCHAR(20) NOT NULL,
+    is_correct BOOLEAN NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

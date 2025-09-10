@@ -116,7 +116,7 @@ class ConnectionManager:
             "type": "system",
             "text": message
         })
-        for client_data in self.rooms.get(room_name, {}).values():  # CORRETTO
+        for client_data in self.rooms.get(room_name, {}).values():  
             await client_data["ws"].send_text(broadcast_message)
 
     async def send_question_to_players(self, question: str, room_name: str, question_id: int):

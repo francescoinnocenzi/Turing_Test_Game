@@ -3,6 +3,7 @@ from database.connection import create_db_connection
 import requests
 from schemas.judgment import LLMJudgmentResponse
 from typing import Union
+import services.state as state
 
 async def get_llm_judgment(session_id: int) -> Union["LLMJudgmentResponse", dict]:
     """
@@ -95,7 +96,7 @@ async def get_llm_judgment(session_id: int) -> Union["LLMJudgmentResponse", dict
         # Chiama l'LLM per il giudizio
         url = "http://ollama:11434/api/chat"
         payload = {
-            "model": "gemma2:2b-instruct-q2_K",
+            "model": state.model,
             "messages": messages,
             "stream": False
         }

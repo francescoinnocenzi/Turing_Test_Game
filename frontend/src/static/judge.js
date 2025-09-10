@@ -1,45 +1,47 @@
 import { getRoomNameFromUrl, scrollAllChats, showResultModal } from "./utils.js";
+// Variabili globali
+let ws = null;  // WebSocket
+let clientId = Math.floor(Math.random() * 100000); // ID casuale per il client
+let lastQuestion = null;  // Ultima domanda inviata
+let questionCounter = 0; // Contatore delle domande inviate
+let role = "JUDGE"; // Ruolo fisso per questa pagina
 
-let ws = null;
-let clientId = Math.floor(Math.random() * 100000);
-let lastQuestion = null;
-let questionCounter = 0;
-let role = "JUDGE";
-
+// Invio domanda quando si preme "Invio"
 document.getElementById("questionInput").addEventListener("keydown", function(e) {
     if (e.key === "Enter") {
         e.preventDefault();
         sendQuestion();
     }
 })
-
+// Funzione per impostare e gestire la connessione WebSocket
 function setupWebSocket(roomName) {
     const url = `ws://localhost:8003/ws/${roomName}/${clientId}?role=${role}&mode=single`;
     console.log("Connessione a:", url);
-
+    // Connetti al WebSocket
     ws = new WebSocket(url);
-
+    // Evento quando la connessione viene aperta
     ws.onopen = () => {
         document.getElementById("room-id").textContent = roomName;
         // document.getElementById("ws-id").textContent = clientId;
         console.log("Connesso come JUDGE");
     };
 
-    let pendingAnswers = [];
-    let currentPositions = {};
+    let pendingAnswers = []; // Buffer per le risposte in arrivo
+    let currentPositions = {}; // Posizioni correnti dei player (left/right)
+    // Gestione dei messaggi in arrivo
     ws.onmessage = (event) => {
         try {
-            const data = JSON.parse(event.data);
+            const data = JSON.parse(event.data); // Messaggio ricevuto
 
             console.log(data);
 
             const button = document.querySelector(".send-button");
             const input = document.getElementById("questionInput");
-
+            // Gestisci i diversi tipi di messaggi
             if (data.type === "player_answer") {
                 pendingAnswers.push(data); // salva in memoria le risposte
                 console.log('pending: ' + pendingAnswers);
-            } else if(data.type == "time_to_judge"){
+            } else if(data.type == "time_to_judge"){ // Tempo di giudicare
                 input.disabled = true;
                 input.placeholder = "Partita giunta al termine...";
                 button.disabled = true;
@@ -64,24 +66,24 @@ function setupWebSocket(roomName) {
                 `;
                 
                 console.log(data.message);
-            } else if (data.type === "positions") {
+            } else if (data.type === "positions") { //Posizioni dei player inviarte dal server
                 // Aggiorna le posizioni correnti
                 currentPositions.left = data.content.left;   // "HUMAN" o "BOT"
                 currentPositions.right = data.content.right; // "HUMAN" o "BOT"
                 console.log("Posizioni aggiornate:", currentPositions);
                 
-            } else if(data.type == "final_judgment"){
+            } else if(data.type == "final_judgment"){ // Giudizio finale con risultato
                 console.log(data.judgment)
 
                 const patterns = ["GIUDICE ha VINTO", "GIUDICE ha PERSO"];
                 const judgeResult = patterns.find(p => data.judgment.includes(p));
 
                 console.log(judgeResult);
-
+                // Mostra il risultato in un modale personalizzato
                 if (judgeResult) {
                     showResultModal(judgeResult, 'single', 'judge','JUDGE');
                 }
-            }else if (data.type === "all_answered") {//DA SISTEMARE
+            }else if (data.type === "all_answered") { // Tutti i player hanno risposto
                 console.log("Tutti i player hanno risposto!");
 
                 console.log(pendingAnswers);
@@ -92,7 +94,7 @@ function setupWebSocket(roomName) {
                     li.textContent = ans.text;
 
                     console.log("STAMPA", currentPositions, ans.player_type);
-
+                    // Determina a quale chat aggiungere la risposta in base al tipo di player
                     if (ans.player_type === currentPositions.left.type) {
                         li.className = "playerA";
                         li.innerHTML = `<strong>A (${ans.player_type})</strong>: ${ans.text}`;
@@ -144,7 +146,7 @@ function setupWebSocket(roomName) {
         }
     };
 }
-
+// Funzione per inviare una domanda al server
 function sendQuestion() {
     const input = document.getElementById("questionInput");
     const button = document.querySelector(".send-button");
@@ -168,7 +170,7 @@ function sendQuestion() {
 
     scrollAllChats(); 
 
-    // Invia la domanda al server (includiamo un qid nel payload)
+    // Invia la domanda al server
     const msg = { type: "question", text: text };
     ws.send(JSON.stringify(msg));
     console.log("Domanda inviata:", text);
@@ -181,7 +183,7 @@ function sendQuestion() {
 
     button.disabled = true;
 }
-
+// Funzione per inviare il giudizio del giudice al server
 function submitJudgment() {
     const chosen = document.querySelector('input[name="chosen_player"]:checked');
     if (!chosen) {
@@ -191,7 +193,7 @@ function submitJudgment() {
 
     console.log("Giudizio inviato:", chosen.value);
 
-    // Invia solo la scelta al backend via WebSocket
+    // Invia solo la scelta al server via WebSocket
     ws.send(JSON.stringify({
         type: "judge_choice",
         chosen_player_human: chosen.value
@@ -218,7 +220,7 @@ function submitJudgment() {
 window.submitJudgment = submitJudgment;
 window.sendQuestion = sendQuestion;
 
-
+// Funzione per chiudere il modale del risultato
 function closeResultModal() {
     if (window.currentModal) {
         window.currentModal.remove();

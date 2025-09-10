@@ -1,6 +1,7 @@
 from database.connection import create_db_connection
+from schemas.service_response import ServiceResponse
 
-def handle_scores(user_id: int, session_id: int, mode: str, role : str, win: bool) -> None:
+def handle_scores(user_id: int, session_id: int, mode: str, role : str, win: bool) -> ServiceResponse:
     """
     Inserisce i punteggi dei giocatori nel database in base al risultato della partita.
 
@@ -10,6 +11,9 @@ def handle_scores(user_id: int, session_id: int, mode: str, role : str, win: boo
         mode (str): Modalità di gioco, "single" o "multi".
         role (str): Ruolo dell'utente ("PLAYER" o "JUDGE").
         win (bool): Indica se il ruolo specificato ha vinto la partita.
+
+    Returns
+        ServiceResponse: Oggetto che indica l'esito dell'operazione ("ok" o "error").
 
     Raises
         ValueError: Se ci sono incongruenze nei ruoli o modalità sconosciute.
@@ -87,9 +91,12 @@ def handle_scores(user_id: int, session_id: int, mode: str, role : str, win: boo
         
         print(f"Punteggi aggiornati: User {user_id}, Session {session_id}, Score {judge_score}, Mode {mode} , Role JUDGE")
 
+        return ServiceResponse(status="ok")
+
     except Exception as e:
         conn.rollback()
         print(f"Errore nell'aggiornamento punteggi: {e}")
+        return ServiceResponse(status="error")
     finally:
         cursor.close()
         conn.close()

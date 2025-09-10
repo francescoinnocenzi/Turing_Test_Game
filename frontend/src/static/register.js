@@ -1,6 +1,6 @@
 const form = document.getElementById("registerForm");
 const msg = document.getElementById("msg");
-
+// Gestione della sottomissione del form di registrazione
 form.addEventListener("submit", async (e) => {
     e.preventDefault();
     msg.style.display = "none";
@@ -16,7 +16,7 @@ form.addEventListener("submit", async (e) => {
         msg.style.display = "block";
         return;
     }
-
+    // Chiamata al backend per registrare l'utente
     try {
         const res = await fetch(
             "http://localhost:8003/api/register",

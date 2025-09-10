@@ -29,13 +29,9 @@ zope.event==5.1
 zope.interface==7.2
 fastapi-sessions==0.3.2
 
-# # Transformer embeddings
 sentence-transformers>=2.2.2,<5.2.0
 
-# # PyTorch CPU-only
 torch==2.2.0
 -f https://download.pytorch.org/whl/cpu/torch_stable.html
 
-
-# For safety: lock NumPy version to <2 due to compatibility issues
 numpy<2

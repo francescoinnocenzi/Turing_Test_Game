@@ -1,10 +1,10 @@
 import { getRoomNameFromUrl, showResultModal } from "./utils.js";
-
-let ws = null;
-let clientId = Math.floor(Math.random()*100000);
-let role = 'PLAYER'; 
-let pendingQuestions = [];
-let currentQuestionId = null;
+// Variabili globali
+let ws = null;  // WebSocket
+let clientId = Math.floor(Math.random()*100000);  // ID casuale per il client
+let role = 'PLAYER';   // Ruolo fisso per questa pagina
+let pendingQuestions = []; // Buffer per le domande in arrivo
+let currentQuestionId = null;  // ID dell'ultima domanda ricevuta
 
 let roomName = getRoomNameFromUrl();
 if (!roomName) {
@@ -15,12 +15,12 @@ if (!roomName) {
 // Mostra info su pagina
 document.getElementById("room-id").textContent = roomName;
 
-// Connetti al WebSocket
+// Connetti WebSocket e gestisci gli eventi
 const url = `ws://localhost:8003/ws/${roomName}/${clientId}?role=${role}&mode=multi`;
 ws = new WebSocket(url);
-
+// Evento quando la connessione viene aperta
 ws.onopen = () => console.log(`Connesso come ${role} in modalità multi nella stanza ${roomName}`);
-
+// Evento quando si verifica un errore
 ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
     
@@ -45,21 +45,21 @@ ws.onmessage = (event) => {
     }
 
     // Gioco terminato
-    else if(data.type === "final_judgment"){
+    else if(data.type === "final_judgment"){ // Giudizio finale
         console.log("Giudizio finale ricevuto:", data.judgment);
 
         let playerResult = null;
-
+        // Determina il risultato del player in base al giudizio
         if (data.judgment.includes("GIUDICE ha VINTO")) {
             playerResult = "PLAYER ha PERSO";
         } else if (data.judgment.includes("GIUDICE ha PERSO")) {
             playerResult = "PLAYER ha VINTO";
         }
-
+        // Mostra il modale del risultato
         if (playerResult) {
             showResultModal(playerResult, 'multi', 'player_multi','PLAYER');
         }
-    }else if(data.type === "players_update"){
+    }else if(data.type === "players_update"){ // Aggiornamento numero giudici
         const judgeCount = document.getElementById("judge-count");
         judgeCount.textContent = `${data.judge}/1`;
 
@@ -67,6 +67,10 @@ ws.onmessage = (event) => {
             disableForm();
         }
     }
+};
+// Evento quando si verifica un errore
+ws.onerror = (e) => {
+    console.error("Errore WebSocket Player in modalita Multiplayer:", e);
 };
 
 function enableForm(){

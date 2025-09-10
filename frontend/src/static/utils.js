@@ -1,16 +1,20 @@
+//FUNZIONI COMUNI A PIU' FILE JS
+
+// Funzione per estrarre il room_name dall'URL
 export function getRoomNameFromUrl() {
     const params = new URLSearchParams(window.location.search);
     return params.get("room");
 }
-
+// Funzione per scrollare in fondo tutte le chat
 export function scrollAllChats() {
     document.querySelectorAll(".chat-box").forEach((box) => (box.scrollTop = box.scrollHeight));
 }
-
+// Funzione per creare una nuova sessione e reindirizzare alla pagina specificata
 export function createSession(bottone, mode, page) {
     bottone.addEventListener("click", async (event) => {
         event.preventDefault();
         try {
+            // Chiamata al backend per creare una nuova sessione
             const response = await fetch(
                 "http://localhost:8003/create/session",
                 {
@@ -39,7 +43,7 @@ export function createSession(bottone, mode, page) {
         }
     });
 }
-
+// Funzione per mostrare il modale del risultato personalizzato
 export function showResultModal(result, mode, page, role) {
     // Determina se ha vinto o perso
     const hasWon = result.includes("VINTO");
@@ -74,7 +78,7 @@ export function showResultModal(result, mode, page, role) {
 
     // Aggiungi al body
     document.body.appendChild(modalOverlay);
-
+// Funzione per ottenere il messaggio di risultato personalizzato
 function getResultMessage(mode, role, hasWon) {
 
     if (role === "JUDGE") {

@@ -72,7 +72,7 @@ def create_question_llm() -> dict[str, str]:
     print(messages)
 
     payload = {
-        "model": "gemma2:2b-instruct-q2_K",
+        "model": state.model,
         "messages": messages,
         "stream": False
     }

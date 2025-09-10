@@ -1,46 +1,46 @@
 import { getRoomNameFromUrl, showResultModal } from "./utils.js";
 
+// Variabili globali
+let ws = null; // WebSocket
+let mode = null; // Modalità di gioco
+let clientId = Math.floor(Math.random() * 100000); // ID casuale per il client
+let currentQuestionId = null; // ID dell'ultima domanda ricevuta
+let role = 'PLAYER'; // Ruolo fisso per questa pagina
+let currentAnswer = null; // Risposta corrente
 
-let ws = null;
-let mode = null;
-let clientId = Math.floor(Math.random() * 100000);
-let currentQuestionId = null;
-let role = 'PLAYER';
-let currentAnswer = null;
-
-
+// Funzione per impostare e gestire la connessione WebSocket
 function setupWebSocket(selectedRoom) {
-    mode = "single";
+    mode = "single"; // Modalità fissa per questa pagina
 
     // Chiudi la WebSocket esistente se attiva
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.close();
     }
-
+    // Crea l'URL del WebSocket
     const url = `ws://localhost:8003/ws/${selectedRoom}/${clientId}?role=${role}&mode=${mode}`;
     console.log("Connessione a:", url);
-
+    // Connetti al WebSocket
     ws = new WebSocket(url);
-
+    // Evento quando la connessione viene aperta
     ws.onopen = () => {
         console.log(`Connesso come PLAYER in modalità ${mode}, stanza: ${selectedRoom}`);
         document.getElementById("room-id").textContent = `${selectedRoom.toUpperCase()} - ${mode.toUpperCase()}`;
     };
-
+    // Evento quando si verifica un errore
     ws.onerror = (e) => {
         console.error("Errore WebSocket:", e);
     };
-
+    // Evento quando la connessione viene chiusa
     ws.onclose = (evt) => {
         console.warn("WS chiuso:", evt);
     };
-
+    // Gestione dei messaggi in arrivo
     ws.onmessage = (event) => {
         try {
             let msg = JSON.parse(event.data);
             console.log(msg.type);
-            
-            if (msg.type === "question") {
+            // Gestisci i diversi tipi di messaggi
+            if (msg.type === "question") { // Nuova domanda
                 const questionDiv = document.getElementById("current-question");
                 questionDiv.innerHTML = `<span class="emoji">❓</span>Domanda: ${msg.text}`;
                 questionDiv.className = "current-question new-question";
@@ -61,11 +61,11 @@ function setupWebSocket(selectedRoom) {
                 setTimeout(() => {
                     questionDiv.className = "current-question";
                 }, 2000);
-            } else if (msg.type === "final_judgment") {
+            } else if (msg.type === "final_judgment") { // Giudizio finale
                 console.log("Giudizio finale ricevuto:", msg.judgment);
         
                 let playerResult = null;
-
+                // Determina il risultato del player in base al giudizio
                 if (msg.judgment.includes("GIUDICE ha VINTO")) {
                     playerResult = "PLAYER ha PERSO";
                 } else if (msg.judgment.includes("GIUDICE ha PERSO")) {
@@ -73,7 +73,7 @@ function setupWebSocket(selectedRoom) {
                 }
                 
                 console.log(playerResult);
-
+                // Mostra il modale del risultato
                 if (playerResult) {
                     showResultModal(playerResult, 'single', 'player','PLAYER');
                 }
@@ -97,11 +97,11 @@ function setupWebSocket(selectedRoom) {
         }
     };
 }
-
+// Inizializza la WebSocket con il room_name dall'URL
 const roomName = getRoomNameFromUrl();
 setupWebSocket(roomName);
 
-// --- invio messaggi ---
+// Gestione dell'invio della risposta
 document.getElementById('messageForm').addEventListener('submit', sendMessage);
 
 function sendMessage(event) {
@@ -129,7 +129,7 @@ function sendMessage(event) {
         if (currentQuestionId) {
             message.question_id = currentQuestionId;
         }
-        try {
+        try { // Invia il messaggio al server
             ws.send(JSON.stringify(message));
             input.value = '';
         } catch (error) {
@@ -144,7 +144,7 @@ function sendMessage(event) {
     return false;
 }
 
-
+// Funzione per chiudere il modale del risultato
 function closeResultModal() {
     if (window.currentModal) {
         window.currentModal.remove();

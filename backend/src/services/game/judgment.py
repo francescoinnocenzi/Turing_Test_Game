@@ -18,9 +18,9 @@ def create_judgment(request: JudgmentRequest) -> JudgmentResponse:
     try:
         # Salva il giudizio
         cursor.execute("""
-            INSERT INTO judgments (session_id, judge_id, chosen_player_human)
-            VALUES (?, ?, ?)
-        """, (request.session_id, request.judge_id, request.chosen_player_human))
+            INSERT INTO judgments (session_id, judge_id, chosen_player_human,is_correct)
+            VALUES (?, ?, ?,?)
+        """, (request.session_id, request.judge_id, request.chosen_player_human,request.is_correct))
         conn.commit()
 
         judgment_id = cursor.lastrowid

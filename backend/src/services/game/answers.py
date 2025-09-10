@@ -58,7 +58,7 @@ def create_answer(request: AnswerRequest) -> AnswerResponse:
         )
         row: Any = cursor.fetchone()
         if row is None:
-            raise HTTPException(status_code=404, detail="Answer not found after insert")
+            raise HTTPException(status_code=404, detail="Domanda non trovata dopo l'inserimento")
 
         return AnswerResponse(
             id=row[0],

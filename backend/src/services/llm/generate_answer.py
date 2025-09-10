@@ -12,6 +12,8 @@ import torch
 from sentence_transformers import util
 import services.state as state
 from schemas.api_models import SimilarityResponse
+import services.state as state
+
 
 state.chat_history = [] # list[dict]
 
@@ -35,7 +37,7 @@ async def get_llm_response(question: str) -> str:
         response = ask_with_memory(request_data)
         return response.answer
     except Exception as e:
-        print(f"❌ Errore nella chiamata a LLM: {e}")
+        print(f"Errore nella chiamata a LLM: {e}")
         return "Mi dispiace, non ho capito la domanda."
 
 def ask_with_memory(request: RequestAPI) -> ResponseAPI:
@@ -67,9 +69,7 @@ def ask_with_memory(request: RequestAPI) -> ResponseAPI:
     messages: list = [system_prompt] + state.chat_history  # prepend il system
 
     payload = {
-        #gemma2:2b-instruct-q2_K
-        #gemma3:4b
-        "model": "gemma2:2b-instruct-q2_K", #Versione ottimizzata di gemma3:4b
+        "model": state.model,
         "messages": messages,
         "stream": False
     }

@@ -67,7 +67,7 @@ async def create_session(response: Response, request: Request,backend: InMemoryB
 
         # aggiorna SessionData
         old_data = await backend.read(session_uuid)
-        print("📌 old_data trovato:", old_data)
+        print("old_data trovato:", old_data)
         if not old_data:
             raise HTTPException(status_code=404, detail="Sessione non trovata")
 

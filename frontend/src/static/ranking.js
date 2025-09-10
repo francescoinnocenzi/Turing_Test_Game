@@ -1,6 +1,6 @@
 const container = document.getElementById("ranking-container");
 const refreshBtn = document.getElementById("refresh-ranking");
-
+// Funzione per caricare la classifica dal backend
 async function loadRanking() {
     try {
         container.innerHTML = "<p>Caricamento classifica...</p>";
