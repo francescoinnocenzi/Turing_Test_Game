@@ -153,8 +153,6 @@ async def auto_generate_next_question(room_name: str, session_id: int):
             
             print(f"Risposta bot salvata: {bot_response}")
 
-            # await manager.send_message_to_all("Puoi rispondere alla nuova domanda!", "question_new", room_name)
-
             return next_question
             
         else:

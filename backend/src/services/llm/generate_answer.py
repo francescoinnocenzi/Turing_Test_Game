@@ -82,6 +82,7 @@ def ask_with_memory(request: RequestAPI) -> ResponseAPI:
         
         print("Payload inviato a Ollama:\n", json.dumps(payload, indent=2))
 
+        # Pulisce la risposta da eventuali emoji o caratteri tipi di MD
         answer = risposta_api["message"]["content"]
         answer = clean_text(answer)
         
@@ -111,7 +112,7 @@ async def trova_simile(request: QuestionRequest) -> SimilarityResponse:
     Raises
         HTTPException: Se si verifica un errore di database.
     """
-    model = get_model()  # modello caricato solo alla prima chiamata
+    model = get_model()  # modello caricato 
     conn = create_db_connection()
     cursor = conn.cursor()
 
@@ -149,11 +150,11 @@ async def trova_simile(request: QuestionRequest) -> SimilarityResponse:
         for row in frasi_trovate:
             ids.append(row[0])
             testi.append(row[1])
-            embeddings_db.append(torch.tensor(json.loads(row[2]))) # deserializzo da JSON in tensore che utilizza pytorch
+            embeddings_db.append(torch.tensor(json.loads(row[2]))) # converto la stringa JSON in una lista Python di numeri, trasformo quella lista in un tensore PyTorch
 
-        embeddings_db = torch.stack(embeddings_db) 
+        embeddings_db = torch.stack(embeddings_db) # prende la lista di tensori (ognuno è un embedding) e li unisce in un unico tensore 2D.
 
-        # Embedding input in ingresso
+        # calcola l’embedding della frase input_frase usando il modello e fa restituire un tensore PyTorch.
         embedding_input = model.encode(input_frase, convert_to_tensor=True)
 
         # Calcolo similarità coseno tra embedding_input e embeddings_db
@@ -202,7 +203,7 @@ async def trova_simile(request: QuestionRequest) -> SimilarityResponse:
             frase_input=input_frase,
             frase_simile=None,
             risposta_trovata=risposta_nuova,
-            similarita=0.0,
+            similarita=best_score,
             tipo_risposta="LLM"
         )
 

@@ -119,7 +119,7 @@ async def check_and_finalize_game(session_id: int, room_name: str, question_coun
             await manager.send_judgment_to_all(judgment_result.judge_result, room_name)
             print(f"Giudizio inviato: {judgment_result.judge_result}")
         
-        if (mode == "single" or mode == "multi"):
+        else:
             await manager.send_message_to_all("Scegli chi è UMANO", "time_to_judge", room_name)
         
         return ServiceResponse(status="ok")

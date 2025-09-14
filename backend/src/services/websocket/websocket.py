@@ -7,8 +7,7 @@ class ConnectionManager:
     def __init__(self):
         # Dizionario che ha come chiave la stanza e come valore un 
         # dict delle connessioni WebSocket attive {client_id: {ws, role}}
-        self.rooms: dict[str, dict[int, dict[str, any]]] = {}  # CORRETTO IL TIPO
-
+        self.rooms: dict[str, dict[int, dict[str, any]]] = {}  
         # { 
         #  "room1": {1: {"ws": websocket_obj1, "role": "JUDGE"}, 2: {"ws": websocket_obj2, "role": "HUMAN"}, },
         #  "room2": { 3: {"ws": websocket_obj3, "role": "JUDGE"},} 
@@ -78,8 +77,10 @@ class ConnectionManager:
         """
         room = self.rooms.get(room_name, {})
 
+        # per ogni PLAYER trovato genera un 1 e poi li somma
         players = sum(1 for c in room.values() if c["role"] == "PLAYER")
-        judge_connected = any(c["role"] == "JUDGE" for c in room.values())
+        # genera una sequenza di booleani, uno per ogni client: [False, False, True]. Restituisce True se almeno uno è True.
+        judge_connected = any(c["role"] == "JUDGE" for c in room.values()) 
 
         message = {
             "type": "players_update", 
@@ -142,8 +143,8 @@ class ConnectionManager:
         
         sent_count = 0
         for client_id, client_data in room.items():
-            # Invia solo ai player (HUMAN e BOT), non al giudice
-            if client_data["role"] in ["PLAYER", "BOT"]:
+            # Invia solo ai player non al giudice
+            if client_data["role"] == "PLAYER":
                 await client_data["ws"].send_text(message)
                 print(f"Sent to client {client_id} ({client_data['role']})")
                 sent_count += 1

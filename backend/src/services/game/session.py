@@ -120,11 +120,12 @@ async def join_session(room_name: str, backend: InMemoryBackend[UUID, SessionDat
         db_session_id = row[0]
         print("Sto per unirmi alla sessione con id:", db_session_id)
 
-        # Aggiorno SessionData con l'ID della sessione a cui sta partecipando (fino ad ora è None)
+        # Legge i dati della sessione con identificativo session_uuid dal backend
         old_data = await backend.read(session_uuid)
         if not old_data:
             raise HTTPException(status_code=404, detail="Sessione non trovata")
 
+        # Aggiorno SessionData con l'ID della sessione a cui sta partecipando (fino ad ora è None)
         updated = old_data.model_copy(update={"session_id": db_session_id})
         await backend.update(session_uuid, updated)
 
@@ -225,6 +226,7 @@ async def get_data_session_ws(websocket: WebSocket, cookie: CookieParameters, ba
         Tuple[Optional[int], Optional[int]]: session_id e user_id, None se non trovati.
     """
     try:
+        # Usa la funzione cookie per leggere dal WebSocket l’UUID della sessione
         session_uuid = cookie(websocket)
         print(f"Session UUID verificato: {session_uuid}")
 

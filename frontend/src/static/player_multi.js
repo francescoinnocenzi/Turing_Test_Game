@@ -94,7 +94,6 @@ document.getElementById("messageForm").addEventListener("submit", (e) => {
     if(answer && ws.readyState === WebSocket.OPEN){
         ws.send(JSON.stringify({
             type: "answer",
-            from: clientId,
             text: answer,
             question_id: currentQuestionId
         }));

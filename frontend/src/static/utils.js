@@ -46,7 +46,7 @@ export function createSession(bottone, mode, page) {
 // Funzione per mostrare il modale del risultato personalizzato
 export function showResultModal(result, mode, page, role) {
     // Determina se ha vinto o perso
-    const hasWon = result.includes("VINTO");
+    const hasWon = result.includes("VINTO"); // la vittoria si rifersice sempre al ruolo
 
     // Crea l'overlay della modale
     const modalOverlay = document.createElement("div");

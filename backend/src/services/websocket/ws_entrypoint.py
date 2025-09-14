@@ -47,6 +47,7 @@ async def ws_entrypoint(websocket: WebSocket, room_name: str, client_id: str, co
         None
     """
 
+    # Recupera il parametro "role" e "mode" dalla query string della connessione WebSocket, poi converte tutto in MAIUSCOLO
     role = websocket.query_params.get("role", "").upper()
     mode = websocket.query_params.get("mode", "single").lower()
 

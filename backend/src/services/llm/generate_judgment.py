@@ -40,32 +40,32 @@ async def get_llm_judgment(session_id: int) -> Union["LLMJudgmentResponse", dict
             return {"error": f"Nessuna risposta trovata per la sessione {session_id}"}
         
         # Organizza le risposte per player
-        human_responses = []
-        bot_responses = []
+        human_answers_responses = []
+        bot_answers_responses = []
         
         for row in results:
             question, answer, author_type, author_user_id = row
             
             if author_type == "HUMAN":
-                human_responses.append(f"Q: {question}\nA: {answer}")
+                human_answers_responses.append(f"Q: {question}\nA: {answer}")
             elif author_type == "BOT":
-                bot_responses.append(f"Q: {question}\nA: {answer}")
-        
+                bot_answers_responses.append(f"Q: {question}\nA: {answer}")
+
         # Randomizza SOLO i nomi, non i dati
         import random
         player_a_name = "Player A"
         player_b_name = "Player B"
 
         players_data = [
-            (human_responses, "HUMAN"),
-            (bot_responses, "BOT")  
+            (human_answers_responses, "HUMAN"),
+            (bot_answers_responses, "BOT")  
         ]
         random.shuffle(players_data)
 
         # Ora assegna in modo chiaro
-        player_a_responses, player_a_real_type = players_data[0]
-        player_b_responses, player_b_real_type = players_data[1]
-        
+        player_a_answers_responses, player_a_real_type = players_data[0]
+        player_b_answers_responses, player_b_real_type = players_data[1]
+
         # Prepara il prompt per l'LLM giudice
         judgment_prompt = {
             "role": "system",
@@ -82,9 +82,9 @@ async def get_llm_judgment(session_id: int) -> Union["LLMJudgmentResponse", dict
         conversation_data = {
             "role": "user", 
             "content": (
-                f"{player_a_name} (risposte):\n" + "\n\n".join(player_a_responses) + 
+                f"{player_a_name} (risposte):\n" + "\n\n".join(player_a_answers_responses) + 
                 "\n\n--- SEPARATORE ---\n\n" +
-                f"{player_b_name}(risposte):\n" + "\n\n".join(player_b_responses) +
+                f"{player_b_name} (risposte):\n" + "\n\n".join(player_b_answers_responses) +
                 "\n\n Rispondi SOLO con 'Player A è UMANO' o 'Player B è UMANO'."
             )
         }

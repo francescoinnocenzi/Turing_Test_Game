@@ -21,7 +21,7 @@ def create_question(request: QuestionRequest) -> QuestionResponse:
     """
     conn = create_db_connection()
     cursor = conn.cursor()
-    model = get_model() 
+    model = get_model() # reucpero il modello di sentence-transformers
     
     try:
         # 1. Calcolo embedding della domanda

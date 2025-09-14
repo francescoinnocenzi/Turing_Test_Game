@@ -1,4 +1,4 @@
--- Comandi SQL per creare le tabelle del database Turing Test Chat
+-- Comandi SQL per creare le tabelle del database Turing Test Game
 
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,          -- ID univoco utente
@@ -53,7 +53,8 @@ CREATE TABLE IF NOT EXISTS judgments (
     judge_id INT NOT NULL,
     chosen_player_human VARCHAR(20) NOT NULL,
     is_correct BOOLEAN NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (judge_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 

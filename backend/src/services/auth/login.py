@@ -42,7 +42,7 @@ async def login(login_request: LoginRequest, response: Response, cookie: Session
             raise HTTPException(status_code=401, detail="Utente non trovato")
         
         stored_password = user[2]  # password hash
-        if not bcrypt.checkpw(password.encode("utf-8"), stored_password.encode("utf-8")):
+        if not bcrypt.checkpw(password.encode("utf-8"), stored_password.encode("utf-8")): # bcrypt.checkpw resituisce True se coincidono, False altrimenti
             raise HTTPException(status_code=401, detail="Password errata")    
         
         user_id = user[0]  # id

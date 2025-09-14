@@ -96,7 +96,9 @@ async def handle_question(room_name: str, role: str, message: Dict[str, str], mo
         await assign_and_send_positions(room_name, manager)
 
         # Invia domanda a players (caso multiplayer)
-        await manager.send_question_to_players(text, room_name, saved_q.id)
+        if mode == "multi":
+            await manager.send_question_to_players(text, room_name, saved_q.id)
+            
         print(f"Question sent to players in room {room_name}")
 
         # BOT 1 (LLM)
@@ -271,10 +273,14 @@ async def handle_judge_choice(room_name: str, message: Dict[str, Any], session_i
         result_judgment = create_judgment(judgment_req)
 
         if correct_answer:
-            handle_scores(user_id, session_id, mode, role=role, win=True)
+            response = handle_scores(user_id, session_id, mode, role=role, win=True)
+            if response.status == "error":
+                raise HTTPException(status_code=500, detail="Errore in handle_scores")
             await manager.send_judgment_to_all("GIUDICE ha VINTO", room_name)
         else:
-            handle_scores(user_id, session_id, mode, role=role, win=False)
+            response = handle_scores(user_id, session_id, mode, role=role, win=False)
+            if response.status == "error":
+                raise HTTPException(status_code=500, detail="Errore in handle_scores")
             await manager.send_judgment_to_all("GIUDICE ha PERSO", room_name)
         
         return ServiceResponse(status="ok")

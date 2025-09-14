@@ -25,13 +25,13 @@ def register(register_request: RegisterRequest) -> RegisterResponse:
 
     try:
         # Hash della password
-        password_bytes = password.encode("utf-8")
-        hashed = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
+        password_bytes = password.encode("utf-8") # converte la password in byte, perché la libreria bcrypt lavora solo con byte
+        hashed = bcrypt.hashpw(password_bytes, bcrypt.gensalt()) # crea un hash della password usando l’algoritmo bcrypt
 
         # Inserimento utente nel DB
         cur.execute(
             "INSERT INTO users (username, password_hash, email) VALUES (%s, %s, %s)",
-            (username, hashed.decode("utf-8"), email)
+            (username, hashed.decode("utf-8"), email) # decode("utf-8"): converte l’hash da byte a stringa
         )
         conn.commit()
 

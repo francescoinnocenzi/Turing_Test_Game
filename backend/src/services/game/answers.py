@@ -12,13 +12,7 @@ def create_answer(request: AnswerRequest) -> AnswerResponse:
     Inserisce una nuova risposta nel database e restituisce i dati completi della risposta appena creata.
 
     Args
-        request (AnswerRequest): Oggetto contenente i dati della risposta da inserire, tra cui:
-            - question_id: ID della domanda a cui rispondere.
-            - session_id: ID della sessione corrente.
-            - text: Testo della risposta.
-            - author_user_id: ID dell'utente che scrive la risposta.
-            - author_type: Tipo dell'autore ("HUMAN" o "BOT").
-            - room_name: Nome della stanza in cui la risposta viene inviata.
+        request (AnswerRequest): Oggetto contenente i dati della risposta da inserire
 
     Returns
         AnswerResponse: Oggetto contenente i dati completi della risposta inserita.
