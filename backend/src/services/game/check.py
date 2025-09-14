@@ -120,7 +120,10 @@ async def check_and_finalize_game(session_id: int, room_name: str, question_coun
             print(f"Giudizio inviato: {judgment_result.judge_result}")
         
         else:
-            await manager.send_message_to_all("Scegli chi è UMANO", "time_to_judge", room_name)
+            await manager.send_to_judge({
+                "type": "time_to_judge",
+                "message": "Scegli chi è l'essere umano"
+            }, room_name)
         
         return ServiceResponse(status="ok")
     except Exception as e:
