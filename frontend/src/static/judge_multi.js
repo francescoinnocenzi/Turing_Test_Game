@@ -56,11 +56,11 @@ if (roomName) {
                 // Determina a quale chat aggiungere la risposta in base al tipo di player
                 if (ans.player_type === currentPositions.left.type) { 
                     li.className = "playerA";
-                    li.innerHTML = `<strong>A (${ans.player_type})</strong>: ${ans.text}`;
+                    li.innerHTML = `<strong>A</strong>: ${ans.text}`;
                     document.getElementById("messagesA").appendChild(li);
                 } else if (ans.player_type === currentPositions.right.type) {
                     li.className = "playerB";
-                    li.innerHTML = `<strong>B (${ans.player_type})</strong>: ${ans.text}`;
+                    li.innerHTML = `<strong>B</strong>: ${ans.text}`;
                     document.getElementById("messagesB").appendChild(li);
                 }
             });

@@ -97,11 +97,11 @@ function setupWebSocket(roomName) {
                     // Determina a quale chat aggiungere la risposta in base al tipo di player
                     if (ans.player_type === currentPositions.left.type) { // Se il player_type della risposta corrisponde a quello del giocatore a sinistra appartiene al Player A
                         li.className = "playerA";
-                        li.innerHTML = `<strong>A (${ans.player_type})</strong>: ${ans.text}`;
+                        li.innerHTML = `<strong>A</strong>: ${ans.text}`;
                         document.getElementById("messagesA").appendChild(li);
                     } else if (ans.player_type === currentPositions.right.type) { // altrimenti la risposta appartiene al Player B.
                         li.className = "playerB";
-                        li.innerHTML = `<strong>B (${ans.player_type})</strong>: ${ans.text}`;
+                        li.innerHTML = `<strong>B</strong>: ${ans.text}`;
                         document.getElementById("messagesB").appendChild(li);
                     }
 

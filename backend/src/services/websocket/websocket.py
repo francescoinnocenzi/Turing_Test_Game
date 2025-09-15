@@ -44,8 +44,11 @@ class ConnectionManager:
             }
             
             print(f"ASSIGNED ROLE: Client {client_id} → {role}")
-        
-        print(f"ROOMS STATE: {[(r, list(clients.keys())) for r, clients in self.rooms.items()]}")
+
+        print("ROOM STATE")
+        for room, clients in self.rooms.items():
+            print(room, clients)
+
         await self.notify_players_update(room_name)
 
 

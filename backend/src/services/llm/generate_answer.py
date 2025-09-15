@@ -122,9 +122,9 @@ async def trova_simile(request: QuestionRequest) -> SimilarityResponse:
     try:
         # Prendo solo domande di sessioni precedenti
         cursor.execute("""
-            SELECT id, text, embedding
-            FROM questions
-            WHERE session_id != ?
+            SELECT q.id, q.text, q.embedding
+            FROM questions q JOIN answers a ON q.id = a.question_id
+            WHERE session_id != ? AND a.author_type = 'HUMAN'
         """, (request.session_id,))
         frasi_trovate = cursor.fetchall()  # [(id, text, embedding_json), ...]
 
@@ -184,7 +184,7 @@ async def trova_simile(request: QuestionRequest) -> SimilarityResponse:
         cursor.close()
         conn.close()
 
-    print(f"BEST SCORE {best_score}")
+    print(f"BEST SCORE {best_score}, {risposta_trovata}, {input_frase}, {best_sentence}, {best_id}")
 
     if best_score > soglia_similarità and risposta_trovata:
         response = SimilarityResponse(
